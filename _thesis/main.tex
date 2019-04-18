@@ -1,0 +1,43 @@
+\documentclass[a4paper,12pt]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amssymb}
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+\usepackage{booktabs}
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{bbm}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\title{DRL Edge Caching Model}
+\date{}
+\begin{document}
+\maketitle
+\section{Model and formulation}
+
+We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment. In our proposed model, the caching agent observes the environment and obtains several signals, including user requests, context information, and network conditions. These signals are assembled into a high-dimensional state input and then fed to the deep neural network embodied convolutional neural networks, which can mine useful information and output the value function or the policy. According to the output, an action is selected, determining the files to be cached at the next slot. The caching agent will receive a reward by observing the caching performance. The aim is to maximize (minimize) the expected accumulated discount reward (cost).\\~\\
+To be specific, we consider one edge node for edge caching with cache size of $C$. Each file is given a unique index, which acts as the file ID. 
+We assume that there are $N$ files in total for users, which are labeled as $\{1,2,\cdots,N\}$, accordingly. In addition, we assume that the sizes of each file are very close, which can be estimated as $l$. For simplicity, we just set it as $1$, which means the cache can include $C$ files. We denote the user request as $t$. The edge node can serve the request immediately if the requested file has been cached locally. Otherwise, the edge node has to request this file from the cloud server and updates the local cache accordingly. The list of users' requests is denoted as $\{R_1,R_2,\cdots\}$, where $R_t$ is the ID of the requested file at request time $t$. \\~\\
+We aim to find the optimal caching policy to maximize the expected accumulated discount reward $\mathbb{E}\left[\sum_{t=0}^{\infty}\gamma^tr_t\right]$, where $\gamma\in(0,1]$ and the reward is defined as 
+$$r_t=\frac{\sum_{i=1}^t\mathbbm{1}(R_i)}{t}$$
+where the indicator function is defined as
+$$
+\mathbbm{1}\left(R_{i}\right)=\left\{\begin{array}{ll}{1,} & {R_{i} \in \mathcal{C}_{t}} \\ {0} & {R_{i} \notin \mathcal{C}_{t}}\end{array}\right.
+$$
+where $\mathcal{C}_t$ is the cache state in this period. The motivation is to represent the cache hit rate, which evaluates the data traffic.\\~\\
+ We define the action space as $\mathcal{A}=\{a_1,a_2,\cdots,a_m\}$, where $m$ describes the total possible actions and generally a large value. For each file, there are two cache states: cached and not cached. There are also two kinds of actions: find a pair of files and exchange the cache states of the two files; keep the cache states of files unchanged.\\~\\
+ Summary our formulation:\\
+\emph{State:}\\
+After each request $t$, the caching agent state is defined as
+$$s_t=\left(x_{t0},x_{t1},x_{t2}\cdots,x_{tC}\right)$$
+where the index of the currently requested file is $0$, while the index of the cached file is from $1$ to $C$.\\
+\emph{Action:}\\
+In order to limit the action size, for each request, the DRL agent makes a decision on whether to store the currently requested file in the cache or not, and if yes, the agent determines which local file will be replaced. For each caching decision, there are $(C+1)$ possible actions. When $a_t=0$, the currently requested file is not stored, and the current caching space is not changed. When $a_t=n$, where $n\in\{1,2,\cdots,C\}$, the action is to store the currently requested file by replacing the $n$-th file in the cache.
+
+
+\end{document}

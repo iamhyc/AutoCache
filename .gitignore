@@ -1,0 +1,6 @@
+.vscode
+__pycache__
+model
+test_traces
+training_traces
+*.pyc
