@@ -1,4 +1,3 @@
-
 import numpy as numpy
 import tensorflow as tf
 import tflearn
@@ -59,10 +58,10 @@ class ActorNetwork(BaseNetwork):
         
         # Create the actor network
         self.inputs, self.out = self.create_actor_network()
-        # Get all network parameters
+        # [network_params] Get all network parameters
         self.network_params = \
             tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='actor')
-        # Set all network parameters
+        # [input_network_params, set_network_params_op] Set all network parameters
         self.input_network_params = []
         for param in self.network_params:
             self.input_network_params.append(
@@ -71,29 +70,39 @@ class ActorNetwork(BaseNetwork):
         for idx, param in enumerate(self.input_network_params):
             self.set_network_params_op.append(self.network_params[idx].assign(param))
 
-        # Selected action, 0-1 vector
+        # [acts] Selected action, 0-1 vector
         self.acts = tf.placeholder(tf.float32, [None, self.a_dim])
-
-        # This gradient will be provided by the critic network
+        # [act_grad_wdights] This gradient will be provided by the critic network
         self.act_grad_weights = tf.placeholder(tf.float32, [None, 1])
 
-        # Compute the objective (log action_vector and entropy)
-        self.obj = tf.reduce_sum(tf.multiply(
-                       tf.log(tf.reduce_sum(tf.multiply(self.out, self.acts),
-                                            reduction_indices=1, keepdims=True)),
-                       -self.act_grad_weights)) \
-                   + ENTROPY_WEIGHT * tf.reduce_sum(tf.multiply(self.out,
-                                                           tf.log(self.out + ENTROPY_EPS)))
+        # [obj?] Compute the objective (log action_vector and entropy)
+        self.obj =  tf.reduce_sum(
+                        tf.multiply(
+                            tf.log(
+                                tf.reduce_sum(
+                                    tf.multiply(self.out, self.acts),
+                                    reduction_indices=1,
+                                    keepdims=True
+                                )
+                            ),
+                            - self.act_grad_weights
+                        )
+                    )
+                    + ENTROPY_WEIGHT * \
+                        tf.reduce_sum(
+                            tf.multiply(self.out, tf.log(self.out + ENTROPY_EPS))
+                        )
 
-        # Combine the gradients here
+        # [actor_gradients] Combine the gradients here
         self.actor_gradients = tf.gradients(self.obj, self.network_params)
 
-        # Optimization Op
+        # [optimize] Optimization Op
         self.optimize = tf.train.RMSPropOptimizer(self.lr_rate).\
             apply_gradients(zip(self.actor_gradients, self.network_params))
 
         pass
     
+    #TODO: design state space and the network
     def create_actor_network(self):
         with tf.variable_scope('actor'):
             inputs = tflearn.input_data(shape=[None, self.s_dim[0], self.s_dim[1]])
@@ -159,11 +168,11 @@ class CriticNetwork(BaseNetwork):
         # Create the critic network
         self.inputs, self.out = self.create_critic_network()
 
-        # Get all network parameters
+        # [network_params] Get all network parameters
         self.network_params = \
             tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='critic')
 
-        # Set all network parameters
+        # [input_network_params, set_network_params_op] Set all network parameters
         self.input_network_params = []
         for param in self.network_params:
             self.input_network_params.append(
@@ -172,16 +181,13 @@ class CriticNetwork(BaseNetwork):
         for idx, param in enumerate(self.input_network_params):
             self.set_network_params_op.append(self.network_params[idx].assign(param))
 
-        # Network target V(s)
+        # [td_target] Network target V(s)
         self.td_target = tf.placeholder(tf.float32, [None, 1])
-
-        # Temporal Difference, will also be weights for actor_gradients
+        # [td] Temporal Difference, will also be weights for actor_gradients
         self.td = tf.subtract(self.td_target, self.out)
-
-        # Mean square error
+        # [loss] Mean square error
         self.loss = tflearn.mean_square(self.td_target, self.out)
-
-        # Compute critic gradient
+        # [gradient] Compute critic gradient
         self.critic_gradients = tf.gradients(self.loss, self.network_params)
 
         # Optimization Op
@@ -238,5 +244,6 @@ class CriticNetwork(BaseNetwork):
         self.sess.run(self.set_network_params_op, feed_dict={
             i: d for i, d in zip(self.input_network_params, input_network_params)
         })
+        pass
 
     pass
