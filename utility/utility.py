@@ -1,3 +1,4 @@
+import json
 from os import listdir
 
 def load_trace(_folder):
@@ -13,3 +14,7 @@ def load_trace(_folder):
         pass
 
     return timestamps, bandwidths
+
+def load_json(_file):
+
+    pass

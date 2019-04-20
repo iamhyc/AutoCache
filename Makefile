@@ -1,7 +1,8 @@
 
 all:prepare run
 
-run:
+run:clean
+	@mkdir -p results
 	python3 ./multi_agent.py
 
 prepare:
@@ -9,7 +10,8 @@ prepare:
 	@pip3 install tflearn
 	@pip3 install matplotlib
 	mkdir -p model
+	mkdir -p results
 	unzip -u ./archived_traces.zip
 
 clean:
-	rm -r model
+	rm -r results
