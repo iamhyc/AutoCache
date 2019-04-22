@@ -1,8 +1,8 @@
 import numpy as numpy
 import tensorflow as tf
 import tflearn
+from params import GAMMA
 
-GAMMA          = 0.99
 ENTROPY_EPS    = 1E-6
 ENTROPY_WEIGHT = 0.5
 

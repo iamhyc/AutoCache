@@ -14,11 +14,35 @@
 \usepackage{graphicx}
 \usepackage[colorinlistoftodos]{todonotes}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
-\title{DRL Edge Caching Model}
+\title{Proactive Edge Caching with A2C}
 \date{}
 \begin{document}
 \maketitle
-\section{Model and formulation}
+
+
+\begin{section}{Background}
+    \begin{enumerate}
+        \item There is one protocol for allocating certain space on edge cache entity, to cater for user's quota;
+        \item The contents of files is sgemented, which are of same length;
+        \item Due to the protocol required, the capacity is under constraint of $C$;
+    \end{enumerate}
+\end{section}
+
+\begin{section}{Problem Description}
+    \begin{enumerate}
+        \item The problem could be formulated into two stage: passive-service, and proactive caching
+        \item In passive-service section, we only adapt 
+    \end{enumerate}
+\end{section}
+
+\begin{section}{A2C Modeling}
+    \begin{enumerate}
+        \item States:
+        \item Capacity Constraint:
+        \item Action:
+        \item Action Constraint:
+    \end{enumerate}
+\end{section}
 
 We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment. In our proposed model, the caching agent observes the environment and obtains several signals, including user requests, context information, and network conditions. These signals are assembled into a high-dimensional state input and then fed to the deep neural network embodied convolutional neural networks, which can mine useful information and output the value function or the policy. According to the output, an action is selected, determining the files to be cached at the next slot. The caching agent will receive a reward by observing the caching performance. The aim is to maximize (minimize) the expected accumulated discount reward (cost).\\~\\
 To be specific, we consider one edge node for edge caching with cache size of $C$. Each file is given a unique index, which acts as the file ID. 
