@@ -33,7 +33,7 @@ def get_information(exp_q, actor_batch, critic_batch):
     _entropy = np.sum(info['entropy'])
     return np.array([_len, _reward, _td_loss, _entropy])
 
-def central_agent(params_qs, exp_qs, model):
+def central_agent(params_qs, exp_qs, nn_model):
     with tf.Session() as sess:
         actor   = a3c.ActorNetwork(sess,  A_DIM, [S_DIM, S_LEN], ACTOR_LRATE)
         critic  = a3c.CriticNetowkr(sess, A_DIM, [S_DIM, S_LEN], CRITIC_LRATE)
@@ -45,10 +45,11 @@ def central_agent(params_qs, exp_qs, model):
 
         #NOTE: load intermidiate NN model
         epoch = 0
-        if model:
-            tmp = path.splittext(path.basename(model))
+        if nn_model:
+            tmp = path.splittext(path.basename(nn_model))
             epoch = int(tmp.split('_')[2])
-            saver.restore(model)
+            saver.restore(sess, nn_model)
+            print('Resumed from %s'%tmp)
             pass
         
         while True:

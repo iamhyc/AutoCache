@@ -3,7 +3,7 @@ all:prepare run
 
 run:clean
 	@mkdir -p results
-	python3 ./multi_agent.py
+	python3 ./rl_training.py
 
 prepare:
 	@pip3 install tensorflow
