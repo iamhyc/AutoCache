@@ -23,7 +23,7 @@ REQ_ZIPF        = 1.10      # Zipf parameter
 # RL Params
 S_DIM           = 3         # (past_download_time, past_download_bw, last_storage)
 S_LEN           = 8         # (depth for *past* states)
-S_MAT           = [S_LEN, S_LEN, C_DIM] # depth for state
+S_MAT           = [S_LEN, S_LEN, C_DIM] # depth for states
 A_DIM           = C_DIM*(A_VAL+1) # Action space dimesion, 5*41=205
 
 GAMMA           = 0.99
