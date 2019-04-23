@@ -53,7 +53,7 @@ def compute_gradients(s_batch, a_batch, r_batch, actor, critic):
     v_batch = critic.predict(s_batch)
     # Reward Batch
     R_batch = np.zeros(r_batch.shape)
-    R_batch[-1, 0] = v_batch[-1, 0]
+    R_batch[-1, 0] = v_batch[-1, 0] #NOTE: bootstrap from last state
     for t in reversed(range(ba_size - 1)):
         R_batch[t, 0] = r_batch[t] + GAMMA * R_batch[t + 1, 0]
     # TD Batch
