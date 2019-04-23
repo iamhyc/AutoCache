@@ -3,20 +3,25 @@ import numpy as np
 from params import *
 
 class Environment:
-    def __init__(self, all_cooked_time, all_cooked_bw, rnd_seed=0):
+    def __init__(self, all_cooked_time, all_cooked_bw, rnd_seed, _random=True, _idx=0):
         self.num_trace       = len(all_cooked_bw)
         self.all_cooked_time = all_cooked_time
         self.all_cooked_bw   = all_cooked_bw
+        self._random         = _random
+        self._idx            = _idx
         # pick a random start, in a random trace file
         np.random.seed(rnd_seed)
-        trace_idx  = np.random.randint(num_trace)
-        self.switch_trace_file(trace_idx)
+        self.switch_trace_file(self._random, self._idx)
         # request generator
         (self.req_time, self.req_file) = \
             self.get_next_request()
         pass
     
-    def get_next_request(self):
+    def get_fixed_request():
+        pass
+
+    def get_next_request(self, _random=True):
+        if not _random: return get_fixed_request()
         # for time, Poission
         req_time = self.last_time + np.random.poisson(REQ_MEAN)
         if req_time > self.trace[-1][0]: #in case of extreme condition
@@ -28,9 +33,11 @@ class Environment:
         req_file = (np.random.rand() > zipf_cumsum).index(0) #locate first '0'
         return (req_time, req_file)
 
-    def switch_trace_file(self, idx):
-        self.trace      = self.get_trace(idx)
-        self.trace_ptr  = np.random.randint(len(self.trace))
+    def switch_trace_file(self, _random=True, fix_idx=0):
+        _idx  = np.random.randint(num_trace) if _random else fix_idx
+        self.trace_idx  = _idx
+        self.trace      = self.get_trace(_idx)
+        self.trace_ptr  = np.random.randint(len(self.trace)) if _random else 0
         self.last_time  = self.trace[max(self.trace_ptr-1, 0)][0]
         self.end_of_trace = False
         pass
@@ -94,7 +101,7 @@ class Environment:
                 p2_delay = sum(p2_delay)
                 #Next Phase-I: switch trace file
                 if self.end_of_trace:
-                    self.switch_trace_file()
+                    self.switch_trace_file(self._random, self._idx)
                 (self.req_time, self.req_file) = \
                     self.get_next_request(self.trace[self.trace_ptr][0], 0)
                 pass
