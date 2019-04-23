@@ -198,7 +198,7 @@ class CriticNetwork(BaseNetwork):
     #TODO: design space and neural network
     def create_critic_network(self):
         with tf.variable_scope('critic'):
-            inputs = tflearn.input_data(shape=[None, self.s_dim[0], self.s_dim[1]]) #(batch_axis, states, depth)
+            inputs = tflearn.input_data(shape=[None, self.s_dim[0], self.s_dim[1]])
 
             #TODO: design space and neural network
 

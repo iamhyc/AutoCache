@@ -18,7 +18,7 @@ F_MAT           = [ set(range(0,5)),    set(range(5, 12)),  set(range(12, 15)),
                   ] #total 40 segments = (5, 7, 3, 11, 4, 10)
 A_VAL           = len(reduce(lambda x,y:x|y, F_MAT)) # action value range, [0,A_VAL]
 REQ_MEAN        = 6000*MS   # Poisson with average interval 6s
-REQ_ZIPF        = 1.3       # Zip parameter
+REQ_ZIPF        = 1.10      # Zipf parameter
 
 # RL Params
 S_DIM           = 3         # (past_download_time, past_download_bw, last_storage)
@@ -31,4 +31,4 @@ CIRITC_LRATE    = 0.001
 TRAIN_SEQ_LEN   = 100
 
 # Model Params
-SEG_SIZE        = 1*MB      # Each segment with same size as 1MB
+SEG_SIZE        = 10*MB      # Each segment with same size as 10MB
