@@ -96,41 +96,66 @@ def agent(agent_id, params_q, exp_q):
     net_env = env.Environment(timestamps, bandwidths, rnd_seed=agent_id)
 
     with tf.Session() as sess:
-        actor   = a3c.ActorNetwork(sess, A_DIM, [S_DIM, S_LEN], ACTOR_LRATE)
+        actor   = a3c.ActorNetwork(sess,  A_DIM, [S_DIM, S_LEN], ACTOR_LRATE)
         critic  = a3c.CriticNetowkr(sess, A_DIM, [S_DIM, S_LEN], CRITIC_LRATE)
 
         acotr_params, critic_params = params_q.get() #block until get
         actor.set_network_params(acotr_params)
         critic.set_network_params(critic_params)
 
-        #TODO: Init Last State
-        cache_mat = list()          # init::empty storage
-        #TODO: Init Last Action
-        #TODO: Init Empty Batch Record (state,action,reward)
+        #Init State, Action
+        action_vec    = np.zeros(A_DIM)
+        action_vec[0] = 1
+        storage       = np.zeros(C_DIM)
+        _state  = [np.zeros((S_INFO, S_LEN))]
+        #Init Empty Batch Record (state,action,reward)
+        s_batch = [np.zeros((S_INFO, S_LEN))]
+        a_batch = [action_vec]
+        r_batch, entropy_record = list(), list()
 
-        global_timer = 0
+        _timer = 0
         while True:
-            net_env.whats_next(cache_mat)
+            # 1) Env Simulation #FIXME: req_flag, req_file not used
+            (req_flag, req_file, p1_delay, p2_delay,storage) = \
+                net_env.whats_next(storage, action_vec)
+            _reward = -p2_delay #NOTE: Maximize the MINUS cost
+            r_batch.append(_reward)
 
-            #TODO: update timer
-            #TODO: calculate reward
-            #TODO: update state
+            # 2) State Update
+            # _state = np.array(s_batch[-1], copy=True) #FIXME: try uncomment if wrong 
+            _state = np.roll(state, -1, axis=1)
+            _state[0, -1] = p1_delay                #NOTE: last download time
+            _state[1, -1] = SEG_SIZE/p1_delay       #NOTE: last download bandwidth
+            _state[2, :C_DIM] = np.array(storage)   #NOTE: last storage
 
-            #TODO: determine next action
-            # action_prob = actor.predict(np,reshapre(state, (1,S_DIM,S_LEN)))
-            # action_cumsum = np.cumsum(action_prob)
-            # action = ().argmax()
+            # 3) Action Update
+            action_prob = actor.predict(np,reshapre(_state, (1,S_DIM,S_LEN)))
+            entropy_record.append(a3c.compute_entropy(action_prob[0])) #update entropy
+            action_cumsum = np.cumsum(action_prob)
+            action_idx = (action_cumsum > np.random.randint(1,1000)/1000.0).argmax()
+            action_vec = np.zeros(A_DIM)
+            action_vec[action_idx] = 1
 
-            # if len(r_batch)>=TRAIN_SEQ_LEN or episodic_flag:
-                #TODO: report experience to coordinator
-                # exp_q.put()
-                # #empty all the batch record
-                # pass
+            # 4) Report Experience
+            if len(r_batch)>=TRAIN_SEQ_LEN:
+                exp_q.put((
+                    s_batch, a_batch, r_batch,
+                    {'entropy': entropy_record}
+                ))
+                # SYNCHRONIZE the network parameters from coordinator
+                actor_params, critic_params = params_q.get()
+                actor.set_network_params(actor_params)
+                critic.set_network_params(critic_params)
+                # CLEAR the privious experience
+                map(lambda x:x.clear(), [s_batch, a_batch, r_batch, entropy_record])
+                pass
             
-            #TODO: update batch record (state,action,reward)
-            pass
-        pass
-
+            # 5) Next Experience
+            _timer += 1
+            s_batch.append(_state)
+            a_batch.append(action_vec)
+            pass #end_of_while
+        pass #end_of_session
     pass
 
 def run(resume_model=None):

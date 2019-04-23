@@ -85,6 +85,7 @@ class Environment:
             pass
         elif a_type=='A':
             (p1_delay, request_indicator) = self.get_segment(a_val)
+            storage[a_idx] = a_val
             # Phase II, Bypass Request
             if request_indicator:
                 #Bypass unhitted segments (FIXME: sub-optimal algorithm)
