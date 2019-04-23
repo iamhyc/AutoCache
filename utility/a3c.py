@@ -6,58 +6,86 @@ from params import GAMMA
 ENTROPY_EPS    = 1E-6
 ENTROPY_WEIGHT = 0.5
 
-class BaseNetwork:
-    def __init__(self, sess, s_dim, a_dim, lr_rate):
-        self.sess = sess
-        self.s_dim = s_dim
-        self.a_dim = a_dim
-        self.lr_rate = lr_rate
+def build_summaries():
+    # (1) TD Loss
+    td_loss = tf.Variable(0.)
+    tf.summary.scalar("TD_loss", td_loss)
+    # (2) Episode Reward
+    eps_total_reward = tf.Variable(0.)
+    tf.summary.scalar("Eps_total_reward", eps_total_reward)
+    # (3) Average Entropy
+    avg_entropy = tf.Variable(0.)
+    tf.summary.scalar("Avg_entropy", avg_entropy)
+
+    summary_ops = tf.summary.merge_all()
+    summary_vars = [td_loss, eps_total_reward, avg_entropy]
+    return summary_ops, summary_vars
+
+def compute_entropy(vec):
+    '''
+    Given vector x, computes the entropy
+    H(x) = - sum( p*log(p) )
+    '''
+    return -sum([x*np.log(x) if 0<x<1 else 0 for x in vec])
+
+def compute_returns(x, gamma):
+    '''
+    Given vector x, computes a vector y such that
+    y[i] = x[i] + gamma * x[i+1] + gamma^2 x[i+2] + ...
+    '''
+    ret = np.zeros(len(x))
+
+    ret[-1] = x[-1]
+    for i in reversed(range(len(x)-1)):
+        y[i] = x[i] + gamma * y[i+1]
         pass
 
-    def compute_entropy(vec):
-        '''
-        Given vector x, computes the entropy
-        H(x) = - sum( p*log(p) )
-        '''
-        return -sum([x*np.log(x) if 0<x<1 else 0 for x in vec])
+    return ret
 
-    def compute_returns(x, gamma):
-        '''
-        Given vector x, computes a vector y such that
-        y[i] = x[i] + gamma * x[i+1] + gamma^2 x[i+2] + ...
-        '''
-        ret = np.zeros(len(x))
+def compute_gradients(s_batch, a_batch, r_batch, terminal, actor, critic):
+    '''
+    batch of s, a, r is from samples in a sequence
+    the format is in np.array([batch_size, s/a/r_dim])
+    terminal is True when sequence ends as a terminal state
+    '''
+    # BA Size
+    ba_size = s_batch.shape[0]
+    # Value Batch
+    v_batch = critic.predict(s_batch)
+    # Reward Batch
+    R_batch = np.zeros(r_batch.shape)
+    R_batch[-1, 0] = 0 if terminal else v_batch[-1, 0] # else boot strap from last state
+    for t in reversed(range(ba_size - 1)):
+        R_batch[t, 0] = r_batch[t] + GAMMA * R_batch[t + 1, 0]
+    # TD Batch
+    td_batch = R_batch - v_batch
 
-        ret[-1] = x[-1]
-        for i in reversed(range(len(x)-1)):
-            y[i] = x[i] + gamma * y[i+1]
+    actor_gradients = actor.get_gradients(s_batch, a_batch, td_batch)
+    critic_gradients = critic.get_gradients(s_batch, R_batch)
+    return (actor_gradients, critic_gradients, td_batch)
+
+def generate_splits(inputs, depth_l):
+    splits = list()
+    for i,depth in enumerate(depth_l):
+        if depth>1:
+            split = tflearn.conv_1d(self.inputs[:,i-1:i,depth], 128,4, activation='relu')
+            split = tflearn.flatten(split)
+            splits.append(split)
             pass
+        elif depth==1:
+            split = tflearn.fully_connected(self.inputs[:,i-1:i,-1], 128, activation='relu')
+            splits.append(split)
+            pass
+        pass
+    return splits
 
-        return ret
-    
-    def build_summaries():
-        # (1) TD Loss
-        td_loss = tf.Variable(0.)
-        tf.summary.scalar("TD_loss", td_loss)
-        # (2) Episode Reward
-        eps_total_reward = tf.Variable(0.)
-        tf.summary.scalar("Eps_total_reward", eps_total_reward)
-        # (3) Average Entropy
-        avg_entropy = tf.Variable(0.)
-        tf.summary.scalar("Avg_entropy", avg_entropy)
-
-        summary_ops = tf.summary.merge_all()
-        summary_vars = [td_loss, eps_total_reward, avg_entropy]
-        return summary_ops, summary_vars
-
-    pass
-
-class ActorNetwork(BaseNetwork):
+class ActorNetwork:
     def __init__(self, session, action_dim, state_dim, learning_rate):
-        super().__init__(session, action_dim, state_dim, learning_rate)
+        self.sess, self.a_dim, self.s_dim, self.lr_rate = \
+            session, action_dim, state_dim, learning_rate
         
         # Create the actor network
-        self.inputs, self.out = self.create_actor_network()
+        self.create_actor_network()
         # [network_params] Get all network parameters
         self.network_params = \
             tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='actor')
@@ -70,12 +98,12 @@ class ActorNetwork(BaseNetwork):
         for idx, param in enumerate(self.input_network_params):
             self.set_network_params_op.append(self.network_params[idx].assign(param))
 
-        # [acts] Selected action, 0-1 vector
-        self.acts = tf.placeholder(tf.float32, [None, self.a_dim])
+        # [acts] selected action, 0-1 vector
+        self.acts =             tf.placeholder(tf.float32, [None, self.a_dim])
         # [act_grad_wdights] This gradient will be provided by the critic network
         self.act_grad_weights = tf.placeholder(tf.float32, [None, 1])
 
-        # [obj?] Compute the objective (log action_vector and entropy)
+        # [objective] Compute the objective (log action_vector and entropy)
         self.obj =  tf.reduce_sum(
                         tf.multiply(
                             tf.log(
@@ -97,23 +125,19 @@ class ActorNetwork(BaseNetwork):
         self.actor_gradients = tf.gradients(self.obj, self.network_params)
 
         # [optimize] Optimization Op
-        self.optimize = tf.train.RMSPropOptimizer(self.lr_rate).\
-            apply_gradients(zip(self.actor_gradients, self.network_params))
-
+        self.optimize = tf.train.RMSPropOptimizer(self.lr_rate) \
+                        .apply_gradients(zip(self.actor_gradients, self.network_params))
         pass
-    
-    #TODO: design state space and the network
+
     def create_actor_network(self):
         with tf.variable_scope('actor'):
-            inputs = tflearn.input_data(shape=[None, self.s_dim[0], self.s_dim[1]])
+            self.inputs = tflearn.input_data(shape=[None, self.s_dim[0], self.s_dim[1]])
             
-            #TODO: design state space and the network
-
-            merge_net = tflearn.merge([], 'concat')
+            splits = generate_splits(self.inputs, S_MAT)
+            merge_net = tflearn.merge(splits, 'concat')
             dense_net_0 = tflearn.fully_connected(merge_net, 128, activation='relu')
-            out = tflearn.fully_connected(dense_net_0, self.a_dim, activation='softmax')
-
-            return inputs, out
+            
+            self.out = tflearn.fully_connected(dense_net_0, self.a_dim, activation='softmax')
             pass
         pass
 
@@ -142,31 +166,32 @@ class ActorNetwork(BaseNetwork):
                 })
         return ret
 
-    def apply_gradients(self, actor_gradients):
+    def apply_gradients(self, this_actor_gradients):
         ret = self.sess.run(self.optimize,
                 feed_dict={
-                    i: d for i, d in zip(self.actor_gradients, actor_gradients)
+                    i: d for i, d in zip(self.actor_gradients, this_actor_gradients)
                 })
         return ret
 
     def get_network_params(self):
         return self.sess.run(self.network_params)
 
-    def set_network_params(self, input_network_params):
+    def set_network_params(self, this_input_network_params):
         self.sess.run(self.set_network_params_op,
             feed_dict={
-                i: d for i, d in zip(self.input_network_params, input_network_params)
+                i: d for i, d in zip(self.input_network_params, this_input_network_params)
             })
         pass
 
     pass
 
-class CriticNetwork(BaseNetwork):
+class CriticNetwork:
     def __init__(self, session, action_dim, state_dim, learning_rate):
-        super().__init__(session, action_dim, state_dim, learning_rate)
+        self.sess, self.a_dim, self.s_dim, self.lr_rate = \
+            session, action_dim, state_dim, learning_rate
 
         # Create the critic network
-        self.inputs, self.out = self.create_critic_network()
+        self.create_critic_network()
 
         # [network_params] Get all network parameters
         self.network_params = \
@@ -191,22 +216,20 @@ class CriticNetwork(BaseNetwork):
         self.critic_gradients = tf.gradients(self.loss, self.network_params)
 
         # Optimization Op
-        self.optimize = tf.train.RMSPropOptimizer(self.lr_rate).\
-            apply_gradients(zip(self.critic_gradients, self.network_params))
+        self.optimize = tf.train.RMSPropOptimizer(self.lr_rate) \
+                        .apply_gradients(zip(self.critic_gradients, self.network_params))
         pass
     
-    #TODO: design space and neural network
     def create_critic_network(self):
         with tf.variable_scope('critic'):
-            inputs = tflearn.input_data(shape=[None, self.s_dim[0], self.s_dim[1]])
+            self.inputs = tflearn.input_data(shape=[None, self.s_dim[0], self.s_dim[1]])
 
-            #TODO: design space and neural network
-
-            merge_net = tflearn.merge([], 'concat')
+            splits = generate_splits(self.inputs, S_MAT)
+            merge_net = tflearn.merge(splits, 'concat')
             dense_net_0 = tflearn.fully_connected(merge_net, 128, activation='relu')
-            out = tflearn.fully_connected(dense_net_0, 1, activation='linear')
 
-            return inputs, out
+            self.out = tflearn.fully_connected(dense_net_0, 1, activation='linear')
+            pass
         pass
 
     def train(self, inputs, td_target):
@@ -232,17 +255,17 @@ class CriticNetwork(BaseNetwork):
             self.td_target: td_target
         })
 
-    def apply_gradients(self, critic_gradients):
+    def apply_gradients(self, this_critic_gradients):
         return self.sess.run(self.optimize, feed_dict={
-            i: d for i, d in zip(self.critic_gradients, critic_gradients)
+            i: d for i, d in zip(self.critic_gradients, this_critic_gradients)
         })
 
     def get_network_params(self):
         return self.sess.run(self.network_params)
 
-    def set_network_params(self, input_network_params):
+    def set_network_params(self, this_input_network_params):
         self.sess.run(self.set_network_params_op, feed_dict={
-            i: d for i, d in zip(self.input_network_params, input_network_params)
+            i: d for i, d in zip(self.input_network_params, this_input_network_params)
         })
         pass
 
