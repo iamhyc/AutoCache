@@ -6,10 +6,6 @@ KB   = 1E3*BYTE
 MB   = 1E6*BYTE
 MS   = 1E-3
 
-# Pseudorandom Generator
-RANDOM_SEED     = 42
-RANDOM_RNG      = 1000
-
 # Request Parameters
 C_DIM           = 5         # cpacity of 5 segments
 F_DIM           = 6         # total 6 files
@@ -30,6 +26,7 @@ GAMMA           = 0.99
 ACTOR_LRATE     = 0.0001
 CIRITC_LRATE    = 0.001
 TRAIN_SEQ_LEN   = 100
+MODEL_SAVE_INTERVAL = 100
 
 # Model Params
 SEG_SIZE        = 10*MB      # Each segment with same size as 10MB

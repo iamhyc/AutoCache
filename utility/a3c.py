@@ -42,11 +42,10 @@ def compute_returns(x, gamma):
 
     return ret
 
-def compute_gradients(s_batch, a_batch, r_batch, terminal, actor, critic):
+def compute_gradients(s_batch, a_batch, r_batch, actor, critic):
     '''
     batch of s, a, r is from samples in a sequence
     the format is in np.array([batch_size, s/a/r_dim])
-    terminal is True when sequence ends as a terminal state
     '''
     # BA Size
     ba_size = s_batch.shape[0]
@@ -54,7 +53,7 @@ def compute_gradients(s_batch, a_batch, r_batch, terminal, actor, critic):
     v_batch = critic.predict(s_batch)
     # Reward Batch
     R_batch = np.zeros(r_batch.shape)
-    R_batch[-1, 0] = 0 if terminal else v_batch[-1, 0] # else boot strap from last state
+    R_batch[-1, 0] = v_batch[-1, 0]
     for t in reversed(range(ba_size - 1)):
         R_batch[t, 0] = r_batch[t] + GAMMA * R_batch[t + 1, 0]
     # TD Batch
