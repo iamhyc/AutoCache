@@ -46,7 +46,7 @@ def central_agent(params_qs, exp_qs, nn_model):
         #NOTE: load intermidiate NN model
         epoch = 0
         if nn_model:
-            tmp = path.splittext(path.basename(nn_model))
+            tmp = path.splitext(path.basename(nn_model))[0]
             epoch = int(tmp.split('_')[2])
             saver.restore(sess, nn_model)
             printh('Resumed from %s'%tmp)
