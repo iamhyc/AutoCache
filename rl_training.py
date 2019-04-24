@@ -88,7 +88,7 @@ def central_agent(params_qs, exp_qs, nn_model):
             epoch += 1
             if epoch % MODEL_SAVE_INTERVAL == 0: #save the NN model
                 saver.save(sess, './model/nn_ep_%d.ckpt'%epoch)
-                printh('Model ep-%d Saved.'%epoch)
+                printh('Model ep-%d Saved'%epoch)
                 epoch_to_remove = epoch-MODEL_SAVE_INTERVAL*5
                 system('rm -f ./model/nn_ep_%d.ckpt*'%(epoch_to_remove))
                 pass

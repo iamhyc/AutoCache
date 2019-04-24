@@ -22,8 +22,8 @@ def load_trace(_folder):
 def printh(_str):
     if LOGGING_LEVEL:
         _str = str(_str)
-        _len = 30
-        _tmp = '=' * int((30-len(_str))/2)
+        _len = 50
+        _tmp = '=' * int((_len-len(_str))/2)
         print('%s %s %s'%(_tmp,_str,_tmp))
     pass
 
