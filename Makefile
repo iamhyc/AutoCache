@@ -14,4 +14,4 @@ prepare:
 	unzip -u ./archived_traces.zip
 
 clean:
-	rm -r results
+	@rm -rf results

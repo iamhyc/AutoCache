@@ -1,17 +1,17 @@
 #!/usr/bin/python3
 from sys import argv
 from os import path
-import numpy as numpy
+import numpy as np
 import tensorflow as tf
 from queue import Queue
 import multiprocessing as mp
-from multiprocessing import Process, Pool
+from multiprocessing import Process
 
 from utility import a3c, env
 from utility.utility import load_trace
 
 from params import *
-NUM_AGENTS = mp.cpu_count()-1 # use n-1 core
+NUM_AGENTS = 1#mp.cpu_count()-1 # use n-1 core
 
 global timestamps, bandwidths
 
@@ -36,9 +36,9 @@ def get_information(exp_q, actor_batch, critic_batch):
 def central_agent(params_qs, exp_qs, nn_model):
     with tf.Session() as sess:
         actor   = a3c.ActorNetwork(sess,  A_DIM, [S_DIM, S_LEN], ACTOR_LRATE)
-        critic  = a3c.CriticNetowkr(sess, A_DIM, [S_DIM, S_LEN], CRITIC_LRATE)
+        critic  = a3c.CriticNetwork(sess, A_DIM, [S_DIM, S_LEN], CRITIC_LRATE)
 
-        summary_ops, summary_vars = a3c.BaseNetwork.build_summaries()
+        summary_ops, summary_vars = a3c.build_summaries()
         sess.run(tf.global_variables_initializer())
         saver   = tf.train.Saver()  # save neural net parameters
         # writer  = tf.summary.FileWriter(SUMMARY_DIR, sess.graph)  # training monitor
@@ -61,15 +61,15 @@ def central_agent(params_qs, exp_qs, nn_model):
             # 2) update gradients
             actor_batch, critic_batch = list(), list()
             info_collection = \
-                list(map(lambda q:get_information(q, actor_batch, critic_batch), params_qs))
+                list(map(lambda q:get_information(q, actor_batch, critic_batch), exp_qs))
             for a,c in zip(actor_batch, critic_batch):
                 actor.apply_gradients(a)
                 critic.apply_gradients(c)
                 pass
 
             # 3) build summary
-            total_batch_len, total_reward, total_td_loss, total_entropy = \ 
-                tuple(np.sum(infor_collection, axis=0))
+            total_batch_len, total_reward, total_td_loss, total_entropy = \
+                tuple(np.sum(info_collection, axis=0))
             avg_reward  = total_reward / float(len(info_collection))
             avg_td_loss = total_td_loss / total_batch_len
             avg_entropy = total_entropy / total_batch_len
@@ -98,7 +98,7 @@ def agent(agent_id, params_q, exp_q):
 
     with tf.Session() as sess:
         actor   = a3c.ActorNetwork(sess,  A_DIM, [S_DIM, S_LEN], ACTOR_LRATE)
-        critic  = a3c.CriticNetowkr(sess, A_DIM, [S_DIM, S_LEN], CRITIC_LRATE)
+        critic  = a3c.CriticNetwork(sess, A_DIM, [S_DIM, S_LEN], CRITIC_LRATE)
 
         acotr_params, critic_params = params_q.get() #block until get
         actor.set_network_params(acotr_params)
@@ -168,13 +168,17 @@ def run(resume_model=None):
     timestamps, bandwidths = load_trace('./training_traces')
 
     # create a coordinator and multiple agent processes
-    coordinator = Process(central_agent, args=(params_qs, exq_qs, resume_model))
+    coordinator = Process(target=central_agent, args=(params_qs, exp_qs, resume_model))
     coordinator.start()
     # execute Pool of parallel agents (until the Poll is down)
-    with Pool(NUM_AGENTS) as p:
-        agent_params = zip(range(NUM_AGENTS), params_qs, exp_qs)
-        p.map(agent, list(agent_params))
+    agents = list()
+    for i in range(NUM_AGENTS):
+        new_agent = Process(target=agent, args=(i, params_qs[i], exp_qs[i]))
+        agents.append(new_agent)
+        new_agent.start()
         pass
+    
+    coordinator.join() #block the main thread
     pass
 
 if __name__ == "__main__":

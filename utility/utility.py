@@ -1,19 +1,22 @@
 import json
-from os import listdir
+from os import listdir,path
 
 def load_trace(_folder):
-    timestamps, bandwidths = [], []
+    all_cooked_time, all_cooked_bw = list(), list()
 
     for _file in listdir(_folder):
-        with open(_folder+_file, 'r') as f:
+        with open(path.join(_folder, _file), 'r') as f:
+            cooked_time, cooked_bw = list(), list()
             for line in f:
                 parse = line.split()
-                timestamps.append(float(parse[0]))
-                bandwidths.append(float(parse[1]))
+                cooked_time.append(float(parse[0]))
+                cooked_bw.append(float(parse[1]))
                 pass
+            all_cooked_time.append(cooked_time)
+            all_cooked_bw.append(cooked_bw)
         pass
-
-    return timestamps, bandwidths
+    
+    return all_cooked_time, all_cooked_bw
 
 class logger:
     def __init__(self, _file):

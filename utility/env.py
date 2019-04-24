@@ -27,14 +27,14 @@ class Environment:
         if req_time > self.trace[-1][0]: #in case of extreme condition
             req_time = req_time - self.trace[-1][0]
         # for file, Zipf (F_DIM=6)
-        zipf_dist = [(i+1)^(-REQ_ZIPF) for i in range(F_DIM)]
+        zipf_dist = [np.power(i+1, -REQ_ZIPF) for i in range(F_DIM)]
         zipf_dist = [x/sum(zipf_dist) for x in zipf_dist]
         zipf_cumsum = np.cumsum(zipf_dist)
-        req_file = (np.random.rand() > zipf_cumsum).index(0) #locate first '0'
+        req_file = (np.random.rand() > zipf_cumsum).argmin() #locate first '0'
         return (req_time, req_file)
 
     def switch_trace_file(self, _random=True, fix_idx=0):
-        _idx  = np.random.randint(num_trace) if _random else fix_idx
+        _idx  = np.random.randint(self.num_trace) if _random else fix_idx
         self.trace_idx  = _idx
         self.trace      = self.get_trace(_idx)
         self.trace_ptr  = np.random.randint(len(self.trace)) if _random else 0
@@ -43,6 +43,7 @@ class Environment:
         pass
 
     def get_trace(self, idx):
+        print()
         return list(zip(self.all_cooked_time[idx], self.all_cooked_bw[idx]))
     
     def get_segment(self, seg_idx, bypass_request=0):

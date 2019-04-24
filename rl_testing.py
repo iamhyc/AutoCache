@@ -13,7 +13,7 @@ def single_agent():
 
     with tf.Session() as sess:
         actor   = a3c.ActorNetwork(sess,  A_DIM, [S_DIM, S_LEN], ACTOR_LRATE)
-        critic  = a3c.CriticNetowkr(sess, A_DIM, [S_DIM, S_LEN], CRITIC_LRATE)
+        critic  = a3c.CriticNetwork(sess, A_DIM, [S_DIM, S_LEN], CRITIC_LRATE)
         sess.run(tf.global_variables_initializer())
         saver   = tf.train.Saver()
         saver.restore(sess, NN_MODEL)
@@ -61,6 +61,7 @@ def main(model):
     global timestamps, bandwidths
     np.random.seed(42)
     os.makedirs('./results', exist_ok=True)
+    timestamps, bandwidths = load_trace('./test_traces')
 
     single_agent()
     

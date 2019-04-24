@@ -24,7 +24,7 @@ A_DIM           = C_DIM*(A_VAL+1) # Action space dimesion, 5*41=205
 
 GAMMA           = 0.99
 ACTOR_LRATE     = 0.0001
-CIRITC_LRATE    = 0.001
+CRITIC_LRATE    = 0.001
 TRAIN_SEQ_LEN   = 100
 MODEL_SAVE_INTERVAL = 100
 

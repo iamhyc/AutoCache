@@ -1,7 +1,7 @@
-import numpy as numpy
+import numpy as np
 import tensorflow as tf
 import tflearn
-from params import GAMMA
+from params import *
 
 ENTROPY_EPS    = 1E-6
 ENTROPY_WEIGHT = 0.5
@@ -67,12 +67,12 @@ def generate_splits(inputs, depth_l):
     splits = list()
     for i,depth in enumerate(depth_l):
         if depth>1:
-            split = tflearn.conv_1d(self.inputs[:,i-1:i,depth], 128,4, activation='relu')
+            split = tflearn.conv_1d(inputs[:,i:i+1,:depth], 128,4, activation='relu')
             split = tflearn.flatten(split)
             splits.append(split)
             pass
         elif depth==1:
-            split = tflearn.fully_connected(self.inputs[:,i-1:i,-1], 128, activation='relu')
+            split = tflearn.fully_connected(inputs[:,i:i+1,-1], 128, activation='relu')
             splits.append(split)
             pass
         pass
@@ -114,8 +114,7 @@ class ActorNetwork:
                             ),
                             - self.act_grad_weights
                         )
-                    )
-                    + ENTROPY_WEIGHT * \
+                    ) + ENTROPY_WEIGHT * \
                         tf.reduce_sum(
                             tf.multiply(self.out, tf.log(self.out + ENTROPY_EPS))
                         )
