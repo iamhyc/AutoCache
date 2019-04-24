@@ -1,6 +1,7 @@
 
 import numpy as np
 from params import *
+from utility.utility import printh
 
 class Environment:
     def __init__(self, all_cooked_time, all_cooked_bw, rnd_seed, _random=True, _idx=0):
@@ -17,11 +18,11 @@ class Environment:
             self.get_next_request()
         pass
     
-    def get_fixed_request():
+    def get_fixed_request(self):
         pass
 
-    def get_next_request(self, _random=True):
-        if not _random: return get_fixed_request()
+    def get_next_request(self):
+        if not self._random: return get_fixed_request()
         # for time, Poission
         req_time = self.last_time + np.random.poisson(REQ_MEAN)
         if req_time > self.trace[-1][0]: #in case of extreme condition
@@ -43,13 +44,12 @@ class Environment:
         pass
 
     def get_trace(self, idx):
-        print()
         return list(zip(self.all_cooked_time[idx], self.all_cooked_bw[idx]))
     
     def get_segment(self, seg_idx, bypass_request=0):
         delay, received = 0.0, 0.0
 
-        while (self.trace[self.trace_ptr] < self.req_time)|(bypass_request):
+        while (self.trace[self.trace_ptr][0] < self.req_time)|(bypass_request):
             _duration   = self.trace[self.trace_ptr][0] - self.last_time
             _throughput = self.trace[self.trace_ptr][1]*MB
 
@@ -73,11 +73,11 @@ class Environment:
                 pass
             pass
         
-        request_indicator = (self.trace[self.trace_ptr]>=self.req_time)
+        request_indicator = (self.trace[self.trace_ptr][0]>=self.req_time)
         return (delay, request_indicator)
 
     def parse_action(self, action):
-        idx = action.index(1)
+        idx = list(action).index(1)
         a_idx  = int(idx / A_VAL)   # action over which entry
         a_val  =     idx % A_VAL    # action with which segment
         a_type = 'D' if a_val==0 else 'A'
@@ -104,12 +104,12 @@ class Environment:
                 if self.end_of_trace:
                     self.switch_trace_file(self._random, self._idx)
                 (self.req_time, self.req_file) = \
-                    self.get_next_request(self.trace[self.trace_ptr][0], 0)
+                    self.get_next_request()
                 pass
             pass
 
         return (request_indicator,
-                req_file,
+                self.req_file,
                 p1_delay,
                 p2_delay,
                 storage)

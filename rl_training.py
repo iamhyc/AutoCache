@@ -1,22 +1,22 @@
 #!/usr/bin/python3
 from sys import argv
-from os import path
+from os import path, system
 import numpy as np
 import tensorflow as tf
-from queue import Queue
 import multiprocessing as mp
 from multiprocessing import Process
 
 from utility import a3c, env
-from utility.utility import load_trace
+from utility.utility import *
 
 from params import *
 NUM_AGENTS = 1#mp.cpu_count()-1 # use n-1 core
+SUMMARY_DIR= './results'
 
 global timestamps, bandwidths
 
-def get_information(exp_q, actor_batch, critic_batch):
-    s_batch, a_batch, r_batch, info = exp_q.get()
+def get_information(exp_q, actor, critic, actor_batch, critic_batch):
+    s_batch, a_batch, r_batch, info = exp_q.get() #block until get
     actor_gradient, critic_gradient, td_batch = \
         a3c.compute_gradients(
             s_batch=np.stack(s_batch, axis=0),
@@ -41,7 +41,7 @@ def central_agent(params_qs, exp_qs, nn_model):
         summary_ops, summary_vars = a3c.build_summaries()
         sess.run(tf.global_variables_initializer())
         saver   = tf.train.Saver()  # save neural net parameters
-        # writer  = tf.summary.FileWriter(SUMMARY_DIR, sess.graph)  # training monitor
+        writer  = tf.summary.FileWriter(SUMMARY_DIR, sess.graph)  # training monitor
 
         #NOTE: load intermidiate NN model
         epoch = 0
@@ -49,19 +49,21 @@ def central_agent(params_qs, exp_qs, nn_model):
             tmp = path.splittext(path.basename(nn_model))
             epoch = int(tmp.split('_')[2])
             saver.restore(sess, nn_model)
-            print('Resumed from %s'%tmp)
+            printh('Resumed from %s'%tmp)
             pass
         
         while True:
             # 1) synchronously distribute the network parameters
             actor_params  = actor.get_network_params()
             critic_params = critic.get_network_params()
-            map(lambda q:q.put([actor_params, critic_params]), params_qs)
+            for q in params_qs:
+                q.put((actor_params, critic_params))
+                pass
 
             # 2) update gradients
             actor_batch, critic_batch = list(), list()
             info_collection = \
-                list(map(lambda q:get_information(q, actor_batch, critic_batch), exp_qs))
+                list(map(lambda q:get_information(q, actor, critic, actor_batch, critic_batch), exp_qs))
             for a,c in zip(actor_batch, critic_batch):
                 actor.apply_gradients(a)
                 critic.apply_gradients(c)
@@ -73,20 +75,20 @@ def central_agent(params_qs, exp_qs, nn_model):
             avg_reward  = total_reward / float(len(info_collection))
             avg_td_loss = total_td_loss / total_batch_len
             avg_entropy = total_entropy / total_batch_len
-            #TODO: write into logging file
-            # summary_str = sess.run(summary_ops, feed_dict={
-            #     summary_vars[0]: avg_td_loss,
-            #     summary_vars[1]: avg_reward,
-            #     summary_vars[2]: avg_entropy
-            # })
-            # writer.add_summary(summary_str, epoch)
-            # writer.flush()
+            # TODO: write into logging file
+            summary_str = sess.run(summary_ops, feed_dict={
+                summary_vars[0]: avg_td_loss,
+                summary_vars[1]: avg_reward,
+                summary_vars[2]: avg_entropy
+            })
+            writer.add_summary(summary_str, epoch)
+            writer.flush()
 
             # 4) next epoch and model saving
             epoch += 1
             if epoch % MODEL_SAVE_INTERVAL == 0: #save the NN model
                 saver.save(sess, './model/nn_ep_%d.ckpt'%epoch)
-                print('Model ep-%d Saved.'%epoch)
+                printh('Model ep-%d Saved.'%epoch)
                 pass
             pass
         pass
@@ -100,7 +102,7 @@ def agent(agent_id, params_q, exp_q):
         actor   = a3c.ActorNetwork(sess,  A_DIM, [S_DIM, S_LEN], ACTOR_LRATE)
         critic  = a3c.CriticNetwork(sess, A_DIM, [S_DIM, S_LEN], CRITIC_LRATE)
 
-        acotr_params, critic_params = params_q.get() #block until get
+        acotr_params, critic_params = params_q.get()
         actor.set_network_params(acotr_params)
         critic.set_network_params(critic_params)
 
@@ -108,9 +110,8 @@ def agent(agent_id, params_q, exp_q):
         action_vec    = np.zeros(A_DIM)
         action_vec[0] = 1
         storage       = np.zeros(C_DIM)
-        _state  = [np.zeros((S_INFO, S_LEN))]
         #Init Empty Batch Record (state,action,reward)
-        s_batch = [np.zeros((S_INFO, S_LEN))]
+        s_batch = [np.zeros((S_DIM, S_LEN))]
         a_batch = [action_vec]
         r_batch, entropy_record = list(), list()
 
@@ -123,14 +124,19 @@ def agent(agent_id, params_q, exp_q):
             r_batch.append(_reward)
 
             # 2) State Update
-            # _state = np.array(s_batch[-1], copy=True) #FIXME: try uncomment if wrong 
-            _state = np.roll(state, -1, axis=1)
-            _state[0, -1] = p1_delay                #NOTE: last download time
-            _state[1, -1] = SEG_SIZE/p1_delay       #NOTE: last download bandwidth
+            _state = np.array(s_batch[-1], copy=True)
+            _state = np.roll(_state, -1, axis=1)
+            if p1_delay==0: #NOTE: not downloading action
+                _state[0, -1] = _state[0, -2]
+                _state[1, -1] = _state[1, -2]
+            else:
+                _state[0, -1] = p1_delay                #NOTE: last download time
+                _state[1, -1] = SEG_SIZE/p1_delay       #NOTE: last download bandwidth
+                pass
             _state[2, :C_DIM] = np.array(storage)   #NOTE: last storage
 
             # 3) Action Update
-            action_prob = actor.predict(np,reshapre(_state, (1,S_DIM,S_LEN)))
+            action_prob = actor.predict(np.reshape(_state, (1,S_DIM,S_LEN)))
             entropy_record.append(a3c.compute_entropy(action_prob[0])) #update entropy
             action_cumsum = np.cumsum(action_prob)
             action_idx = (action_cumsum > np.random.randint(1,1000)/1000.0).argmax()
@@ -163,8 +169,8 @@ def run(resume_model=None):
     global timestamps, bandwidths
     # Setup
     np.random.seed(42)
-    params_qs = [Queue() for i in range(NUM_AGENTS)]
-    exp_qs    = [Queue() for i in range(NUM_AGENTS)]
+    params_qs = [mp.Queue(1) for i in range(NUM_AGENTS)]
+    exp_qs    = [mp.Queue(1) for i in range(NUM_AGENTS)]
     timestamps, bandwidths = load_trace('./training_traces')
 
     # create a coordinator and multiple agent processes
@@ -186,6 +192,7 @@ if __name__ == "__main__":
         if len(argv) > 1:
             run(argv[1])
         else:
+            system('rm -rf ./model') #clear privous model
             run()
     except Exception as e:
         print(e)

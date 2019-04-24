@@ -1,5 +1,6 @@
 import json
 from os import listdir,path
+from params import LOGGING_LEVEL
 
 def load_trace(_folder):
     all_cooked_time, all_cooked_bw = list(), list()
@@ -17,6 +18,14 @@ def load_trace(_folder):
         pass
     
     return all_cooked_time, all_cooked_bw
+
+def printh(_str):
+    if LOGGING_LEVEL:
+        _str = str(_str)
+        _len = 30
+        _tmp = '=' * int((30-len(_str))/2)
+        print('%s %s %s'%(_tmp,_str,_tmp))
+    pass
 
 class logger:
     def __init__(self, _file):

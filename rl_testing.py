@@ -22,7 +22,7 @@ def single_agent():
         action_vec    = np.zeros(A_DIM)
         action_vec[0] = 1
         storage       = np.zeros(C_DIM)
-        _state  = [np.zeros((S_INFO, S_LEN))]
+        _state  = [np.zeros((S_DIM, S_LEN))]
         #Init Empty Batch Record #NOTE: no need for testing
 
         _timer = 0
