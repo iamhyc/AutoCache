@@ -4,25 +4,22 @@ from params import *
 from utility.utility import printh
 
 class Environment:
-    def __init__(self, all_cooked_time, all_cooked_bw, rnd_seed, _random=True, _idx=0):
+    def __init__(self, all_cooked_time, all_cooked_bw, rnd_seed, _random=True):
         self.num_trace       = len(all_cooked_bw)
         self.all_cooked_time = all_cooked_time
         self.all_cooked_bw   = all_cooked_bw
         self._random         = _random
-        self._idx            = _idx
+        self.trace_idx       = 0
         # pick a random start, in a random trace file
         np.random.seed(rnd_seed)
-        self.switch_trace_file(self._random, self._idx)
+        self.switch_trace_file()
         # request generator
         (self.req_time, self.req_file) = \
             self.get_next_request()
         pass
     
-    def get_fixed_request(self):
-        pass
 
     def get_next_request(self):
-        if not self._random: return get_fixed_request()
         # for time, Poission
         req_time = self.last_time + np.random.poisson(REQ_MEAN)
         if req_time > self.trace[-1][0]: #in case of extreme condition
@@ -34,11 +31,14 @@ class Environment:
         req_file = (np.random.rand() > zipf_cumsum).argmin() #locate first '0'
         return (req_time, req_file)
 
-    def switch_trace_file(self, _random=True, fix_idx=0):
-        _idx  = np.random.randint(self.num_trace) if _random else fix_idx
-        self.trace_idx  = _idx
-        self.trace      = self.get_trace(_idx)
-        self.trace_ptr  = np.random.randint(len(self.trace)) if _random else 0
+    def switch_trace_file(self):
+        if self._random:
+            self.trace_idx = np.random.randint(self.num_trace)
+        else:
+            self.trace_idx += 1
+        
+        self.trace      = self.get_trace(self.trace_idx)
+        self.trace_ptr  = np.random.randint(len(self.trace)) if self._random else 0
         self.last_time  = self.trace[max(self.trace_ptr-1, 0)][0]
         self.end_of_trace = False
         pass
@@ -102,7 +102,7 @@ class Environment:
                 p2_delay = sum(p2_delay)
                 #Next Phase-I: switch trace file
                 if self.end_of_trace:
-                    self.switch_trace_file(self._random, self._idx)
+                    self.switch_trace_file()
                 (self.req_time, self.req_file) = \
                     self.get_next_request()
                 pass
@@ -111,7 +111,6 @@ class Environment:
         return (request_indicator,
                 self.req_file,
                 p1_delay,
-                p2_delay,
-                storage)
+                p2_delay)
     
     pass # End of Class Environment

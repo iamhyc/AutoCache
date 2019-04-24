@@ -28,8 +28,8 @@ A_DIM           = C_DIM*A_VAL # Action space dimesion, 5*41=205
 GAMMA           = 0.99
 ACTOR_LRATE     = 0.0001
 CRITIC_LRATE    = 0.001
-TRAIN_SEQ_LEN   = 100
-MODEL_SAVE_INTERVAL = 100
+TRAIN_SEQ_LEN       = 500   # Batch Size
+MODEL_SAVE_INTERVAL = 100   # Epoch for saving
 
 # Model Params
 SEG_SIZE        = 10*MB      # Each segment with same size as 10MB

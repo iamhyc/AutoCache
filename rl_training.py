@@ -31,6 +31,7 @@ def get_information(exp_q, actor, critic, actor_batch, critic_batch):
     _reward  = np.sum(r_batch)
     _td_loss = np.sum(td_batch)
     _entropy = np.sum(info['entropy'])
+    print('Batch: %r; TD Loss: %r; Reward: %r; Entropy: %r.'%(_len, _td_loss, _reward, _entropy))
     return np.array([_len, _reward, _td_loss, _entropy])
 
 def central_agent(params_qs, exp_qs, nn_model):
@@ -88,9 +89,13 @@ def central_agent(params_qs, exp_qs, nn_model):
             epoch += 1
             if epoch % MODEL_SAVE_INTERVAL == 0: #save the NN model
                 saver.save(sess, './model/nn_ep_%d.ckpt'%epoch)
-                printh('Model ep-%d Saved'%epoch)
                 epoch_to_remove = epoch-MODEL_SAVE_INTERVAL*5
                 system('rm -f ./model/nn_ep_%d.ckpt*'%(epoch_to_remove))
+
+                printh('Model ep-%d Saved'%epoch)
+                print('[%d] Tot TD Loss: %d; Tot Reward: %d; Tot Entropy: %d.'%(epoch, total_td_loss, total_reward, total_entropy))
+                print('[%d] Avg TD Loss: %d; Avg Reward: %d; Avg Entropy: %d.'%(epoch, avg_td_loss, avg_reward, avg_entropy))
+                print()
                 pass
             pass
         pass
@@ -118,12 +123,16 @@ def agent(agent_id, params_q, exp_q):
         r_batch, entropy_record = list(), list()
 
         _timer = 0
+        req_counter = 0
+        req_file_counter = np.zeros(F_DIM, dtype=np.int32)
         while True:
             # 1) Env Simulation #FIXME: req_flag, req_file not used
-            (req_flag, req_file, p1_delay, p2_delay,storage) = \
+            (req_flag, req_file, p1_delay, p2_delay) = \
                 net_env.whats_next(storage, action_vec)
             _reward = -p2_delay #NOTE: Maximize the MINUS cost
             r_batch.append(_reward)
+            req_counter += req_flag
+            req_file_counter[req_file] +=1
 
             # 2) State Update
             _state = np.array(s_batch[-1], copy=True)
@@ -132,20 +141,24 @@ def agent(agent_id, params_q, exp_q):
                 _state[0, -1] = _state[0, -2]
                 _state[1, -1] = _state[1, -2]
             else:
-                _state[0, -1] = p1_delay                #NOTE: last download time
-                _state[1, -1] = SEG_SIZE/p1_delay       #NOTE: last download bandwidth
+                _state[0, -1] = p1_delay            #NOTE: last download time
+                _state[1, -1] = SEG_SIZE/p1_delay   #NOTE: last download bandwidth
                 pass
             _state[2, :C_DIM] = np.array(storage)   #NOTE: last storage
 
             # 3) Action Update
-            action_prob = actor.predict(np.reshape(_state, (1,S_DIM,S_LEN)))
-            entropy_record.append(a3c.compute_entropy(action_prob[0])) #update entropy
+            action_prob = actor.predict(np.reshape(_state, (1, S_DIM, S_LEN)))
+            if np.isnan(np.sum(action_prob)):
+                print(_state)
+                raise Exception('jump jump jump')
+
             action_cumsum = np.cumsum(action_prob)
-            action_idx = (action_cumsum > np.random.randint(1,1000)/1000.0).argmax()
+            action_idx = ( action_cumsum > (np.random.randint(1,1000)/1000.0) ).argmax()
             action_vec = np.zeros(A_DIM)
             action_vec[action_idx] = 1
 
             # 4) Report Experience
+            entropy_record.append(a3c.compute_entropy(action_prob[0])) #update entropy
             if len(r_batch)>=TRAIN_SEQ_LEN:
                 exp_q.put((
                     s_batch, a_batch, r_batch,
@@ -156,7 +169,11 @@ def agent(agent_id, params_q, exp_q):
                 actor.set_network_params(actor_params)
                 critic.set_network_params(critic_params)
                 # CLEAR the privious experience
-                map(lambda x:x.clear(), [s_batch, a_batch, r_batch, entropy_record])
+                s_batch, a_batch, r_batch, entropy_record = [], [], [], []
+                print('Request time: %d;\treq:%s; storage:%s\n'%(
+                    req_counter, str(list(req_file_counter)), str(list(storage))))
+                req_counter = 0
+                req_file_counter = np.zeros(F_DIM, dtype=np.int32)
                 pass
             
             # 5) Next Experience
