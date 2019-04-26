@@ -1,67 +1,112 @@
-\documentclass[a4paper,12pt]{article}
+\documentclass{article}
 
-%% Language and font encodings
-\usepackage[english]{babel}
-\usepackage[utf8x]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{amssymb}
-%% Sets page size and margins
-\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
-\usepackage{booktabs}
-%% Useful packages
-\usepackage{amsmath}
-\usepackage{bbm}
-\usepackage{graphicx}
-\usepackage[colorinlistoftodos]{todonotes}
-\usepackage[colorlinks=true, allcolors=blue]{hyperref}
-\title{Proactive Edge Caching with A2C}
-\date{}
+% \usepackage{nips_2018} % ready for submission
+% \usepackage[preprint]{nips_2018} % compile a preprint version
+% \usepackage[final]{nips_2018} % to compile a camera-ready version
+% \usepackage[nonatbib]{nips_2018} % to avoid loading the natbib package
+\usepackage[preprint, nonatbib]{nips_2018}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{microtype}      % microtypography
+\usepackage{cite}
+\usepackage{color}
+\title{Proactive Caching with Deep Reinforcement Learning}
+
+\author{
+  HONG Yuncong \\ %\thanks{Use footnote for providing further information about author}
+  Department of Computer Science \\
+  The University of Hong Kong \\
+  \texttt{ychong@cs.hku.hk} \\
+  \And % Using \AND forces a line break at that point
+  ZENG Qunsong \\
+  Department of Electrical and Electronic Engineering \\
+  The University of Hong Kong \\
+  \texttt{qszeng@eee.hku.hk} \\
+}
+
 \begin{document}
+
 \maketitle
 
+\begin{abstract}
+  
+  With the development of cache technology, the performance of real-time networks keeps increasing. The traditional designs for cache placement problem ordinarily employ simple online algorithms, resulting in limitations of solvable problem domain. In this paper, we consider a complicated dynamic programming problem, which is difficult to be solved efficiently with the traditional algorithms. Here, we propose to solve the caching placement problem within acceptable time with deep reinforcement learning (DRL). The performance of our implementations will be evaluated with the real users' data from Google.
+\end{abstract}
+
+\begin{section}{Introduction}
+    \label{intro}
+    Caching is a widely used technology in system to reduce the load on access communication links and shorten access time to the selected contents \cite{general-cache}. This technique is often aimed at caching the contents from the cloud server in advance. In this particular way, the time and resources needed to request and transport contents from upper level cloud server can be effectively saved.
+    
+    As for caching placement problem, one practical design is content delivery network (CDN) which is a network of servers linked together in order to deliver contents with high performance \cite{cloudflare}. Emerging areas, such as information cetric networks (ICNs) and cloud computing frameworks, \cite{ref1,ref2,ref3,ref4} are based on caching problem and are attracting researchers' attention. Many algorithms for caching placement problems are elaborated in related works \cite{dl-mec,dl-icn,expert-cdn}.
+    
+    However, with content caching rises the policy control problem, in which we have to explore and decide which contents to store in caches \cite{DBLP:journals/corr/abs-1712-08132}. Although many related works have exploited their algorithms, few of them can adapt to the online production environment with complicated control problem very well. Inspired by deep reinforcement learning method, we propose to design a DRL algorithm for caching decisions. Our concern in this proposal is to formulate the basic frame for cache hit rate, cache replacement cost and communication cost, and to train a neural network to select the optimal online placement decision for cache nodes.
+\end{section}
 
 \begin{section}{Background}
-    \begin{enumerate}
-        \item There is one protocol for allocating certain space on edge cache entity, to cater for user's quota;
-        \item The contents of files is sgemented, which are of same length;
-        \item Due to the protocol required, the capacity is under constraint of $C$;
-    \end{enumerate}
+    \label{background}
+    In this section, \dots
 \end{section}
 
-\begin{section}{Problem Description}
-    \begin{enumerate}
-        \item The problem could be formulated into two stage: passive-service, and proactive caching
-        \item In passive-service section, we only adapt 
-    \end{enumerate}
+\begin{section}{Related Works}
+    \label{review}
+    In this section, \dots
+
+    Let $Q(s,a;\theta)$ be an approximate action-value function with parameter $\theta$.
+    
+    The general RL problem is formalized as a discrete time stochastic control process where an agent interacts with its environment $s_0\in\mathcal{S}$, by gathering an initial observation $\omega_0\in\Omega$. At each time step $t$, the agent has to take an action $a_t\in\mathcal{A}$. It follows three consequences: the agent obtains a reward $r_t\in\mathcal{R}$, the state transitions to $s_{t+1}\in\mathcal{S}$, and the agent obtains an observation $\omega_{t+1}\in\Omega$ \cite{DBLP:journals/corr/abs-1811-12560}.
 \end{section}
 
-\begin{section}{A2C Modeling}
-    \begin{enumerate}
-        \item States:
-        \item Capacity Constraint:
-        \item Action:
-        \item Action Constraint:
-    \end{enumerate}
+\begin{section}{Formulation}
+    \label{formulation}
+    A general caching problem can be expressed as the following: we denote all the available files as the set $\mathcal{F}$. The file $f_i\in\mathcal{F},(i=1,\cdots,m)$ can be cached on the cache nodes $s_j,(j=1,\cdots,n)$ which form the set $\mathcal{S}$. Here we assume that we have $m$ files and $n$ cache nodes. The request from the user is in the joint set $\mathcal{R}=\mathcal{F}\times\mathcal{S}$. For our own problem, in order to make it clear, we formulate it into dynamic programming format. The system state $x(t)$ is defined as the location distribution of files over cache nodes, and it is worth noting that each file can have more than one copy exists at one time. The control vector $u(t)$ is proactive control to fetch files from the cloud server when request is failed to satisfy. The reward function $R(t)$ is consist of three parts: hit times, loss penalty and communication cost.
+
+    We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment. In our proposed model, the caching agent observes the environment and obtains several signals, including user requests, context information, and network conditions. These signals are assembled into a high-dimensional state input and then fed to the deep neural network embodied convolutional neural networks, which can mine useful information and output the value function or the policy. According to the output, an action is selected, determining the files to be cached at the next slot. The caching agent will receive a reward by observing the caching performance. The aim is to maximize (minimize) the expected accumulated discount reward (cost).\\~\\
+
+    To be specific, we consider one edge node for edge caching with cache size of $C$. Each file is given a unique index, which acts as the file ID. 
+
+    We assume that there are $N$ files in total for users, which are labeled as $\{1,2,\cdots,N\}$, accordingly. In addition, we assume that the sizes of each file are very close, which can be estimated as $l$. For simplicity, we just set it as $1$, which means the cache can include $C$ files. We denote the user request as $t$. The edge node can serve the request immediately if the requested file has been cached locally. Otherwise, the edge node has to request this file from the cloud server and updates the local cache accordingly. The list of users' requests is denoted as $\{R_1,R_2,\cdots\}$, where $R_t$ is the ID of the requested file at request time $t$. \\~\\
+
+    We aim to find the optimal caching policy to maximize the expected accumulated discount reward $\mathbb{E}\left[\sum_{t=0}^{\infty}\gamma^tr_t\right]$, where $\gamma\in(0,1]$ and the reward is defined as
+    where $\mathcal{C}_t$ is the cache state in this period. The motivation is to represent the cache hit rate, which evaluates the data traffic.\\~\\
+    
+    We define the action space as $\mathcal{A}=\{a_1,a_2,\cdots,a_m\}$, where $m$ describes the total possible actions and generally a large value. For each file, there are two cache states: cached and not cached. There are also two kinds of actions: find a pair of files and exchange the cache states of the two files; keep the cache states of files unchanged.\\~\\
+ 
+    Summary our formulation:\\
+    \emph{State:}\\
+    After each request $t$, the caching agent state is defined as
+    $$
+        s_t=\left(x_{t0},x_{t1},x_{t2}\cdots,x_{tC}\right)
+    $$
+    where the index of the currently requested file is $0$, while the index of the cached file is from $1$ to $C$.\\
+    \emph{Action:}\\
+    In order to limit the action size, for each request, the DRL agent makes a decision on whether to store the currently requested file in the cache or not, and if yes, the agent determines which local file will be replaced. For each caching decision, there are $(C+1)$ possible actions. When $a_t=0$, the currently requested file is not stored, and the current caching space is not changed. When $a_t=n$, where $n\in\{1,2,\cdots,C\}$, the action is to store the currently requested file by replacing the $n$-th file in the cache.
 \end{section}
 
-We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment. In our proposed model, the caching agent observes the environment and obtains several signals, including user requests, context information, and network conditions. These signals are assembled into a high-dimensional state input and then fed to the deep neural network embodied convolutional neural networks, which can mine useful information and output the value function or the policy. According to the output, an action is selected, determining the files to be cached at the next slot. The caching agent will receive a reward by observing the caching performance. The aim is to maximize (minimize) the expected accumulated discount reward (cost).\\~\\
-To be specific, we consider one edge node for edge caching with cache size of $C$. Each file is given a unique index, which acts as the file ID. 
-We assume that there are $N$ files in total for users, which are labeled as $\{1,2,\cdots,N\}$, accordingly. In addition, we assume that the sizes of each file are very close, which can be estimated as $l$. For simplicity, we just set it as $1$, which means the cache can include $C$ files. We denote the user request as $t$. The edge node can serve the request immediately if the requested file has been cached locally. Otherwise, the edge node has to request this file from the cloud server and updates the local cache accordingly. The list of users' requests is denoted as $\{R_1,R_2,\cdots\}$, where $R_t$ is the ID of the requested file at request time $t$. \\~\\
-We aim to find the optimal caching policy to maximize the expected accumulated discount reward $\mathbb{E}\left[\sum_{t=0}^{\infty}\gamma^tr_t\right]$, where $\gamma\in(0,1]$ and the reward is defined as 
-$$r_t=\frac{\sum_{i=1}^t\mathbbm{1}(R_i)}{t}$$
-where the indicator function is defined as
-$$
-\mathbbm{1}\left(R_{i}\right)=\left\{\begin{array}{ll}{1,} & {R_{i} \in \mathcal{C}_{t}} \\ {0} & {R_{i} \notin \mathcal{C}_{t}}\end{array}\right.
-$$
-where $\mathcal{C}_t$ is the cache state in this period. The motivation is to represent the cache hit rate, which evaluates the data traffic.\\~\\
- We define the action space as $\mathcal{A}=\{a_1,a_2,\cdots,a_m\}$, where $m$ describes the total possible actions and generally a large value. For each file, there are two cache states: cached and not cached. There are also two kinds of actions: find a pair of files and exchange the cache states of the two files; keep the cache states of files unchanged.\\~\\
- Summary our formulation:\\
-\emph{State:}\\
-After each request $t$, the caching agent state is defined as
-$$s_t=\left(x_{t0},x_{t1},x_{t2}\cdots,x_{tC}\right)$$
-where the index of the currently requested file is $0$, while the index of the cached file is from $1$ to $C$.\\
-\emph{Action:}\\
-In order to limit the action size, for each request, the DRL agent makes a decision on whether to store the currently requested file in the cache or not, and if yes, the agent determines which local file will be replaced. For each caching decision, there are $(C+1)$ possible actions. When $a_t=0$, the currently requested file is not stored, and the current caching space is not changed. When $a_t=n$, where $n\in\{1,2,\cdots,C\}$, the action is to store the currently requested file by replacing the $n$-th file in the cache.
+\begin{section}{AutoCache}
+    \label{algorithm}
+    Inspired by \cite{Pensieve}, we propose to design the algorithm based on reinforcement learning (RL). Consider the standard reinforcement learning setting where an agent interacts with an environment $\mathcal{E}$ over a number of discrete time steps. At each time step $t$, the agent receives a state $s_t$ and selects an action $a_t$ from some set of possible actions $\mathcal{A}$ according to its policy $\pi$, where $\pi$ is a mapping from state $s_t$ to action $a_t$. In return, the agent receives the next state $s_{t+1}$ and receives a scalar reward $r_t$. The process continues until the agent reaches a terminal state after which the process restarts. The return $R_t=\sum_{k=0}^{\infty}\gamma^k r_{t+k}$ is the total accumulated return from time step $t$ with discount factor $\gamma\in(0,1]$. The goal of the agent is to maximize the expected return from each state $s_t$ \cite{rl-intro}. The action value $Q^{\pi}(s,a)=\mathbb{E}[R_t|s_t=s,a]$ is the expected return for selecting action $a$ in state $s$ and following policy $\pi$. The optimal value function $Q^*(s,a)=\max_{\pi}Q^{\pi}(s,a)$ gives the maximum action value for state $s$ and action $a$ achievable by any policy. The value of state $s$ under policy $\pi$ is defined as $V^{\pi}(s)=\mathbb{E}[R_t|s_t=s]$ and is the expected return for following policy $\pi$ from state $s$ \cite{DBLP:journals/corr/MnihBMGLHSK16}. The value function can be represented using a neural network, for example, an actor-critic network. The algorithm is proposed to perform online and hoped to achieve high efficiency.
+\end{section}
 
+\begin{section}{Experiments}
+    \label{exp}
+    We have obtained the real users' data from Google \cite{clusterdata:Reiss2011}. We plan to examine the data trace under the criterion with consideration of quality of service (QoS). In order to highlight our algorithm performance, we also propose to compare the result from our DRL algorithm with that from heuristic algorithms. The time consumption and feasibility of different algorithms will be included in discussion and be a kind of evaluation as well. By taking Google production data trace as an evaluation test-bed, we expect our algorithm could outperform other simple heuristic algorithms.
+\end{section}
+
+\begin{section}{Conclusion}
+    \label{summary}
+    In this section, \dots
+\end{section}
+
+% \subsubsection*{Acknowledgments}
+% Thanks for the inspiration from \textit{Pensieve} the paper that we could make up this model. Thanks for Pro TAN Haisheng's description on basic caching problem.
+
+% \section*{References}
+\bibliographystyle{IEEEtran}
+\bibliography{main.bib}
 
 \end{document}
