@@ -71,7 +71,7 @@
     \subsection{Network Model}
     \label{net_model}
     In our model, other than edge nodes and mobile users, there exists one centralized storage entity called \emph{Cloud} to store all the files users previously uploaded.
-    The network model is illustrated in the following graph:
+    The network model is illustrated in the following figure \ref{fig:network}:
 
     \begin{figure}[h!]
         \label{fig:network}
@@ -110,7 +110,7 @@
 
     We denote the proactive caching policy set as $\mathcal{A} =\mathcal{F} \times \mathcal{S}$, which implies the complexity of potential action space is non-linear. And then we could formulate stochastic optimization problem as following:
     $$
-    \min_{A} \lim_{T \to \infty} \frac{1}{T} E[\sum_r^{\mathcal{R}(t)} \frac{|\mathcal{S}_{r}^{0}|}{BW^{back}(t)}]
+    \min_{\mathcal{A}} \lim_{T \to \infty} \frac{1}{T} E[\sum_r^{\mathcal{R}(t)} \frac{|\mathcal{S}_{r}^{0}|}{BW^{back}(t)}]
     $$
     which implies that the optimization target is to minimize the average service time for missing segments over all the time. The metric of service time is better than conventional git rate cause the varied delay of backhaul also affects the user experience. And for this stochastic optimization problem, we need powerful algorithm to predict the action with respect to request and delay distribution in real-time.
 
@@ -169,31 +169,26 @@
     
 \end{section}
 
-\begin{section}{Performance Ecaluation}
+\begin{section}{Performance Evaluation}
     \label{exp}
-    We choose the performance metric as the only one cost: average service time. We develope one classical offline algorithm, LRU, and compare the performance with our algorithm \textsc{AutoCache}.
+    We obtain the real users' data from Google \cite{clusterdata:Reiss2011}, and the actual usage is directly borrowed from cooked data by \cite{Pensieve}. As the data trace following the format as: [timestamp (s), bandwidth (MBps)], we could collect enough data samples under different network conditions, and plot rather accurate CDF (Cumulative Distribution Function) graph versus the value with normalized service time. The experiments details are listed in the following sections. 
     
-    Then we collect enough data samples from experiencing the simulated environment, and plot the CDF (Cumulative Distribution Function) versus the normalized service time.
-    The baseline algorithm we chose is LRU (Least Recently Used), which is a very classical algorithm in passive caching decision.
-    The experiments details are listed in the following sections. We firstly talk about the parameters setup we use and the data trace.
-
     \subsection{Simulation Setup}
-    We have obtained the real users' data from Google \cite{clusterdata:Reiss2011}. The direct usage is actually cooked by \cite{Pensieve}. The data trace is borrowed cooked data trace from Pensieve \cite{Pensieve}, with the format: [timestamp (s), bandwidth (MBps)].
+    We firstly talk about the parameters setup we use and the data trace.
+    We implement our algorithm with Tensorflow written in Python. The preliminary for the experiment environment is: Python 3.7+, Tensorflow 1.9+. Our program runs regardless of operating system, but we suggest Linux system for better compatibility. Our experiment following is carried out on Windows Subsystem for Linux (WLS) on Windows 10, and there are 4 parallel agents running on all the 4 CPU cores.
 
-    We implement our code with Tensorflow.
-    The experiment environment is:
-    Windows Subsystem for Linux, Python 3.7+, Tensorflow 1.9; the algorithm Parallel agents on 4 CPU cores.
+    Then we generate the random user request distribution with the following parameters. 
+    The request interval is generated with Poisson Point Distribution with mean as 6 seconds ($\lambda=6$). There are total 6 files on the cloud for the user, and the popularity of files obeys Zipf's law over total files with parameter as $\alpha=1.07$.
 
-    The generated request is (over 6 files): Interval with Poisson distribution (mean with 6 seconds); File Popularity with Zipf (over total 6 files, and randomly generated segments oracle)
-    And the storage capacity for cache is: 5 segments, each with 10MB.
+    We choose the performance metric only with one cost: average service time. In order to highlight our algorithm performance, we also propose to compare the result from our DRL algorithm with that from heuristic algorithms. We adapt one classical offline algorithm, LRU for comparison. LRU refers to \textit{Least Recently Used}, which discards the least recently used items firstly in cache. The algorithm requires keeping track of the frequency of all the items, and performance passive caching only when the request is initiated.
 
-    We plan to examine the data trace under the criterion with consideration of quality of service (QoS). In order to highlight our algorithm performance, we also propose to compare the result from our DRL algorithm with that from heuristic algorithms. The time consumption and feasibility of different algorithms will be included in discussion and be a kind of evaluation as well. By taking Google production data trace as an evaluation test-bed, we expect our algorithm could outperform other simple heuristic algorithms.
+    The comparison for statistics property of service delay will be discussed in the results section. By taking Google production data trace as evaluation test-bed, we expect our algorithm could outperform the simple heuristic algorithm.    
 
     \subsection{Results}
-    We compare \textsc{AutoCache} with classical algorithm LRU.
-    The results for training traces with 1000 samples.
-    The results for test traces with 1000 samples.
-    The CDF graph for training traces with LRU and \textsc{AutoCache}.
+    Under the environment and parameters setup in the previous section, we firstly train the A3C neural network for actor and critic with training data. The training process is carried out in a pseudorandom way to enlarge the differences among all of the parallel agents. After enough epoch of training, we test our algorithm with the trained model over test data trace. For fairness, the comparison with LRU is over same data trace set.
+
+    Then we compare \textsc{AutoCache} with classical algorithm LRU. The results for training traces with 1000 samples is shown in Figure \ref{fig:train}; and the results for test traces with 1000 samples is shown in Figure \ref{fig:test}.
+    
     \begin{figure}[htp]
         \centering
         \subfloat[with training data trace]{
@@ -207,6 +202,8 @@
         }
         \caption{The CDF of service delay of LRU and DRL algorithm under training and test data trace}
     \end{figure}
+
+    According to the CDF graph, we could find that: whatever in training data trace or not, our algorithm \textsc{AutoCache} could always outperform the classical LRU algorithm as the distribution of service delay is rather prefer to lower side. The drop of average delay would vary from $10\%-15\%$.
 \end{section}
 
 \begin{section}{Conclusion}
