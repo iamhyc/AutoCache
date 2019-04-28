@@ -43,7 +43,7 @@
 \end{abstract}
 
 \begin{section}{Introduction}
-    \label{intro}
+    \label{sec:intro}
     Caching is a widely used technology in system to reduce the load on access communication links and shorten access time to the selected contents \cite{general-cache}. This technique is often aimed at caching the contents from the cloud server in advance. In this particular way, the time and resources needed to request and transport contents from upper level cloud server can be effectively saved.
     
     As for caching placement problem, one practical design is content delivery network (CDN) which is a network of servers linked together in order to deliver contents with high performance \cite{cloudflare}. Emerging areas, such as information centric networks (ICNs) and cloud computing frameworks, \cite{ref1,ref2,ref3,ref4} are based on caching problem and are attracting researchers' attention. Many algorithms for caching placement problems are elaborated in related works \cite{dl-mec,dl-icn,expert-cdn}.
@@ -52,17 +52,17 @@
 \end{section}
 
 \begin{section}{Background}
-    \label{background}
+    \label{sec:background}
     In this section, \dots
 \end{section}
 
 \begin{section}{Related Works}
-    \label{review}
+    \label{sec:review}
     In this section, \dots
 \end{section}
 
 \begin{section}{Formulation}
-    \label{formulation}
+    \label{sec:formulation}
     We consider the scenario that one single user continuously request a finite set of files from one single edge node. The request would demand one file consisted of segments one time, and there are fixed known file set for that user on the cache node.
     This proposed problem could be considered as taken apart from a more complex model. As the cache node is with finite coverage to server the mobile devices, the mobile users could find finite number of edge cache nodes around. The generalized protocol for association could be: One mobile users firstly initiate the \textit{association request} with all of the cache nodes it could "see", then associate with the best one which accepts the request; the cache node then reserve storage space according to user's quota for service, and thus independent from other users' request response.
     
@@ -74,10 +74,10 @@
     The network model is illustrated in the following figure \ref{fig:network}:
 
     \begin{figure}[h!]
-        \label{fig:network}
         \centering
         \includegraphics[width=0.8\linewidth]{images/network.png}
         \caption{Network Model for Caching Problem}
+        \label{fig:network}
     \end{figure}
 
     The link between Edge Node and Cloud is called "backhaul link", and the link between Edge node and UE (User Equipment) is called "fronthaul link".
@@ -118,18 +118,23 @@
 \end{section}
 
 \begin{section}{\textsc{AutoCache}: A Proactive Cache Algorithm}
-    \label{algorithm}
-    \hl{Please help check the correctness of algorithm}
-
-    In this section, we introduce the algorithm we developed to solve this problem.
-    We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment.
+    \label{sec:algorithm}
+    In this section, we introduce the algorithm \textsc{AutoCache} to solve this problem. We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment.
 
     \subsection{Reinforcement Learning Problem}
+    Inspired by Pensieve \cite{Pensieve}, we propose an algorithm designed based on reinforcement learning (RL). We firstly rewrite the previous optimization definition in section \ref{sec:formulation} into RL format, then reveal the insights of this problem and develop our algorithm.
+
+    Considering the standard reinforcement learning setting, an agent interacts with environment $\mathcal{E}$ over a number of discrete time steps. At each time step $t$, the agent receives a state $s_t$ and selects an action $a_t$ from some set of possible actions $\mathcal{A}$ according to its policy $\pi$. In return, the agent receives the next state $s_{t+1}$ and receives a scalar reward $r_t$. The return
+    $$
+    R_t=\sum_{k=0}^{\infty}\gamma^k r_{t+k}
+    $$
+    is the total accumulated return from time step $t$ with discount factor $\gamma\in(0,1]$. The goal of the agent is to maximize the expected return from each state $s_t$ \cite{rl-intro}.The value of state $s$ under policy $\pi$ is defined as $V^{\pi}(s)=\mathbb{E}[R_t|s_t=s]$ and is the expected return for following policy $\pi$ from state $s$ \cite{DBLP:journals/corr/MnihBMGLHSK16}. The value function can be represented using a neural network, for example, an actor-critic network. The algorithm is proposed to perform online and hoped to achieve high efficiency.
+
+    In our proposed model, the caching agent observes the environment and obtains several signals, including user requests, context information, and network conditions. These signals are assembled into a high-dimensional state input and then fed to the deep neural network embodied convolutional neural networks, which can mine useful information and output the value function or the policy. According to the output, an action is selected, determining the files to be cached at the next slot. The caching agent will receive a reward by observing the caching performance. The aim is to maximize (minimize) the expected accumulated discount reward (cost).
+
     And furthermore, we could consider two phases in this problem.
     Phase-I: Proactive Caching; the proactively request .
     Phase-II: Dedicated Service; the cache node serve the hit segments, and bypass the un-hit request from Cloud.
-
-    In our proposed model, the caching agent observes the environment and obtains several signals, including user requests, context information, and network conditions. These signals are assembled into a high-dimensional state input and then fed to the deep neural network embodied convolutional neural networks, which can mine useful information and output the value function or the policy. According to the output, an action is selected, determining the files to be cached at the next slot. The caching agent will receive a reward by observing the caching performance. The aim is to maximize (minimize) the expected accumulated discount reward (cost).
 
     $x(t)$ is defined as the location distribution of files over cache nodes, and it is worth noting that each file can have more than one copy exists at one time.
     The control vector $u(t)$ is proactive control to fetch files from the cloud server when request is failed to satisfy.
@@ -150,21 +155,26 @@
     where the index of the currently requested file is $0$, while the index of the cached file is from $1$ to $C$.\\
     \emph{Action:}\\
     In order to limit the action size, for each request, the DRL agent makes a decision on whether to store the currently requested file in the cache or not, and if yes, the agent determines which local file will be replaced. For each caching decision, there are $(C+1)$ possible actions. When $a_t=0$, the currently requested file is not stored, and the current caching space is not changed. When $a_t=n$, where $n\in\{1,2,\cdots,C\}$, the action is to store the currently requested file by replacing the $n$-th file in the cache.
-
-    Inspired by \cite{Pensieve}, we propose to design the algorithm based on reinforcement learning (RL). Consider the standard reinforcement learning setting where an agent interacts with an environment $\mathcal{E}$ over a number of discrete time steps. At each time step $t$, the agent receives a state $s_t$ and selects an action $a_t$ from some set of possible actions $\mathcal{A}$ according to its policy $\pi$, where $\pi$ is a mapping from state $s_t$ to action $a_t$. In return, the agent receives the next state $s_{t+1}$ and receives a scalar reward $r_t$. The process continues until the agent reaches a terminal state after which the process restarts. The return $R_t=\sum_{k=0}^{\infty}\gamma^k r_{t+k}$ is the total accumulated return from time step $t$ with discount factor $\gamma\in(0,1]$. The goal of the agent is to maximize the expected return from each state $s_t$ \cite{rl-intro}. The action value $Q^{\pi}(s,a)=\mathbb{E}[R_t|s_t=s,a]$ is the expected return for selecting action $a$ in state $s$ and following policy $\pi$. The optimal value function $Q^*(s,a)=\max_{\pi}Q^{\pi}(s,a)$ gives the maximum action value for state $s$ and action $a$ achievable by any policy. The value of state $s$ under policy $\pi$ is defined as $V^{\pi}(s)=\mathbb{E}[R_t|s_t=s]$ and is the expected return for following policy $\pi$ from state $s$ \cite{DBLP:journals/corr/MnihBMGLHSK16}. The value function can be represented using a neural network, for example, an actor-critic network. The algorithm is proposed to perform online and hoped to achieve high efficiency.
+    
 
     \subsection{Training Algorithm}
-    The applied policy gradient is computed in following according to \cite{a3c}:
+    \hl{Please help check the correctness of algorithm}
+    The following training algorithm procedure is abstracted from the original paper \cite{a3c} and take reference from \textit{Pensieve} \cite{Pensieve}.
+
+    Our algorithm firstly obtain the states after taking action.
+    Then upon receiving the updated states, the agent needs to generate next action based on the actor's decision: $\pi(s_t, a_t) \to [0,1]^{\mathcal{R}}$. The actor network in Figure \ref{fig:a3c} upper part shows how the action is determined after the states input.
+    
+    Then it comes to the policy gradient training session. After applying each action, the simulated environment should provide the corresponding cost $r_t$. The actor-critic algorithm the apply a policy gradient method to estimate the gradient of the expected total cost by observing the trajectories of executions obtained by following the policy \cite{Pensieve}. The applied policy gradient is computed as:
     $$
     \nabla_\theta E_{\pi_\theta}[\sum_{t=0}^{\infty} \gamma^ r_t] = E_{\pi_\theta} [\nabla_{\pi_\theta} log_{\pi_\theta}(s,a) A^{\pi_\theta}(s,a)]
     $$
-    The training algorithm is given in the following graph:
+    where $A^{\pi_theta}(s,a)$ is the \textit{advantage} function, which represents the difference in the expected total cost \cite{Pensieve}. The illustration of the approximation is showed in the lower part of Figure \ref{fig:a3c}.
 
-    \begin{figure}[h]
-        \label{fig:a3c}
+    \begin{figure}[htp]
         \centering
         \includegraphics[width=0.8\linewidth]{a3c-network.png}
         \caption{The actor-Critic algorithms uses for \textsc{AutoCache}}
+        \label{fig:a3c}
     \end{figure}
     
 \end{section}
@@ -188,7 +198,7 @@
     Under the environment and parameters setup in the previous section, we firstly train the A3C neural network for actor and critic with training data. The training process is carried out in a pseudorandom way to enlarge the differences among all of the parallel agents. After enough epoch of training, we test our algorithm with the trained model over test data trace. For fairness, the comparison with LRU is over same data trace set.
 
     Then we compare \textsc{AutoCache} with classical algorithm LRU. The results for training traces with 1000 samples is shown in Figure \ref{fig:train}; and the results for test traces with 1000 samples is shown in Figure \ref{fig:test}.
-    
+
     \begin{figure}[htp]
         \centering
         \subfloat[with training data trace]{
