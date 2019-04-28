@@ -15,10 +15,11 @@
 \usepackage{microtype}      % microtypography
 \usepackage{cite}
 \usepackage{color}
+\usepackage{algorithmicx}
 \title{Proactive Caching with Deep Reinforcement Learning}
 
 \author{
-  HONG Yuncong \\ %\thanks{Use footnote for providing further information about author}
+  HONG Yuncong \\
   Department of Computer Science \\
   The University of Hong Kong \\
   \texttt{ychong@cs.hku.hk} \\
@@ -62,41 +63,68 @@
 
 \begin{section}{Formulation}
     \label{formulation}
-    We consider the scenario that one single user interacts with one single cache node.
-    This scenario is reasonable compared with the multiuser sceneriao because we could always come up with one protocol that, when the user initiate a request for association with cache node, the responded cache node should always reserver reasonable
+    We consider the scenario that one single user continuously request a finite set of files from one single edge node. The request would demand one file consisted of segments one time, and there are fixed known file set for that user on the cache node.
+    This proposed problem could be considered as taken apart from a more complex model. As the cache node is with finite coverage to server the mobile devices, the mobile users could find finite number of edge cache nodes around. The generalized protocol for association could be: One mobile users firstly initiate the \textit{association request} with all of the cache nodes it could "see", then associate with the best one which accepts the request; the cache node then reserve storage space according to user's quota for service, and thus independent from other users' request response.
+    
+    In the following sections, we will firstly elaborate the network model and caching model for our problem, and then we come up with the formal problem definition in the last section.
 
     \subsection{Network Model}
-    Then we further formulate the user-request communication model into two links. We call the link between edge node and cloud the "backhaul link", and the link between edge node and the user the "fronthaul link".
-    The fronthaul transmission is very fast due to the edge node is quite close to mobile users with only one hop. And the time is going to be that 
+    In our model, other than edge nodes and mobile users, there exists one centralized storage entity called \emph{Cloud} to store all the files users previously uploaded.
+    The link between Edge Node and Cloud is called "backhaul link", and the link between edge node and mobile user is called "fronthaul link".
+    As we consider the scenario with edge cache, 
+    We the user-request communication model into two links. We call the link between edge node and cloud the "back-haul link", and the link between edge node and the user the "front-haul link".
+    The front-haul transmission is very fast due to the edge node is quite close to mobile users with only one hop. And the time is going to be that 
     
     \subsection{Caching Model}
-    The storage model is described as followd. The request is based on general files and we don't care about the relationship among files.
+    The storage model is described as followed. The request is based on general files and we don't care about the relationship among files.
     The storage capacity of edge cache node is bounded, due to efficiency limit. But the storage on cloud is assumed to be incredible large. The files are stored in segments on cloud. Each segment is with the same size.
     The caching allows bypass request.
 
     \subsection{Problem Definition}
-    A general caching problem can be expressed as the following: we denote all the available files as the set $\mathcal{F}$. The file $f_i\in\mathcal{F},(i=1,\cdots,m)$ can be cached on the cache nodes $s_j,(j=1,\cdots,n)$ which form the set $\mathcal{S}$. Here we assume that we have $m$ files and $n$ cache nodes. The request from the user is in the joint set $\mathcal{R}=\mathcal{F}\times\mathcal{S}$. For our own problem, in order to make it clear, we formulate it into dynamic programming format. The system state $x(t)$ is defined as the location distribution of files over cache nodes, and it is worth noting that each file can have more than one copy exists at one time. The control vector $u(t)$ is proactive control to fetch files from the cloud server when request is failed to satisfy. The reward function $R(t)$ is consist of three parts: hit times, loss penalty and communication cost.
+    File set:
+    $$
+    f_i\in\mathcal{F},(i=1,\cdots,m), \mathcal{F}
+    $$
+    Segments Function:
+    $$
+    s_j,(j=1,\cdots,n), \mathcal{S}
+    $$
+    Request in the following set:
+    $$
+    \mathcal{R}=\mathcal{F}\times\mathcal{S}
+    $$
+    To be specific, we consider one edge node for edge caching with cache size of $C$.
 
-    We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment. In our proposed model, the caching agent observes the environment and obtains several signals, including user requests, context information, and network conditions. These signals are assembled into a high-dimensional state input and then fed to the deep neural network embodied convolutional neural networks, which can mine useful information and output the value function or the policy. According to the output, an action is selected, determining the files to be cached at the next slot. The caching agent will receive a reward by observing the caching performance. The aim is to maximize (minimize) the expected accumulated discount reward (cost).
+    The request process could be divided into multiple episode, as we don't allow batch-request in our problem.
+    And furthermore, we could consider two phases in this problem.
+    Phase-I: Proactive Caching; the proactively request .
+    Phase-II: Dedicated Service; the cache node serve the hitted segments, and bypass the un-hitted request from Cloud.
 
-    To be specific, we consider one edge node for edge caching with cache size of $C$. Each file is given a unique index, which acts as the file ID. 
+    This stochastic optimization problem is with:
+    Optimization Target (Explain why \emph{service time} is the metric more important than \emph{hit rate})
+    $$
+        \min_{\Omega}\lim_{T \to \infty} \sum_{t=0}^{T-1} T^{service}
+    $$
+    $x(t)$ is defined as the location distribution of files over cache nodes, and it is worth noting that each file can have more than one copy exists at one time. The control vector $u(t)$ is proactive control to fetch files from the cloud server when request is failed to satisfy. The reward function $R(t)$ is consist of three parts: hit times, loss penalty and communication cost.
 
     We assume that there are $N$ files in total for users, which are labeled as $\{1,2,\cdots,N\}$, accordingly. In addition, we assume that the sizes of each file are very close, which can be estimated as $l$. For simplicity, we just set it as $1$, which means the cache can include $C$ files. We denote the user request as $t$. The edge node can serve the request immediately if the requested file has been cached locally. Otherwise, the edge node has to request this file from the cloud server and updates the local cache accordingly. The list of users' requests is denoted as $\{R_1,R_2,\cdots\}$, where $R_t$ is the ID of the requested file at request time $t$.
-
-    We aim to find the optimal caching policy to maximize the expected accumulated discount reward $\mathbb{E}\left[\sum_{t=0}^{\infty}\gamma^tr_t\right]$, where $\gamma\in(0,1]$ and the reward is defined as
-    where $\mathcal{C}_t$ is the cache state in this period. The motivation is to represent the cache hit rate, which evaluates the data traffic.
-    
-    We define the action space as $\mathcal{A}=\{a_1,a_2,\cdots,a_m\}$, where $m$ describes the total possible actions and generally a large value. For each file, there are two cache states: cached and not cached. There are also two kinds of actions: find a pair of files and exchange the cache states of the two files; keep the cache states of files unchanged.
- 
-    Summary our formulation:\\
-    
 \end{section}
 
 \begin{section}{Proactive Cache: AutoCache}
     \label{algorithm}
     In this section, we introduce the algorithm we developed to solve this problem.
+    We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment.
 
     \subsection{Reinforcement Learning Problem}
+    In our proposed model, the caching agent observes the environment and obtains several signals, including user requests, context information, and network conditions. These signals are assembled into a high-dimensional state input and then fed to the deep neural network embodied convolutional neural networks, which can mine useful information and output the value function or the policy. According to the output, an action is selected, determining the files to be cached at the next slot. The caching agent will receive a reward by observing the caching performance. The aim is to maximize (minimize) the expected accumulated discount reward (cost).
+
+    System state:
+    $$
+    x(t)
+    $$
+    We aim to find the optimal caching policy to maximize the expected accumulated discount reward $\mathbb{E}\left[\sum_{t=0}^{\infty}\gamma^tr_t\right]$, where $\gamma\in(0,1]$ and the reward is defined as where $\mathcal{C}_t$ is the cache state in this period. The motivation is to represent the cache hit rate, which evaluates the data traffic.
+
+    We define the action space as $\mathcal{A}=\{a_1,a_2,\cdots,a_m\}$, where $m$ describes the total possible actions and generally a large value. For each file, there are two cache states: cached and not cached. There are also two kinds of actions: find a pair of files and exchange the cache states of the two files; keep the cache states of files unchanged.
     \emph{State:}\\
     After each request $t$, the caching agent state is defined as
     $$
@@ -111,23 +139,24 @@
 
 \begin{section}{Performance Ecaluation}
     \label{exp}
-    We choose the performance metric as the only one cost: service time, for each user's request. Then we collect enough data samples from experiencing the simultated environment, and plot the CDF (Cumulative Distribution Function) versus the normalized service time.
-    The baseline algorithm we choosed is LRU (Least Recently Used), which is a very classical algorithm in passive caching decision.
+    We choose the performance metric as the only one cost: service time, for each user's request. Then we collect enough data samples from experiencing the simulated environment, and plot the CDF (Cumulative Distribution Function) versus the normalized service time.
+    The baseline algorithm we chose is LRU (Least Recently Used), which is a very classical algorithm in passive caching decision.
     The experiments details are listed in the following sections. We firstly talk about the parameters setup we use and the data trace.
 
     \subsection{Simulation Setup}
     We have obtained the real users' data from Google \cite{clusterdata:Reiss2011}. We plan to examine the data trace under the criterion with consideration of quality of service (QoS). In order to highlight our algorithm performance, we also propose to compare the result from our DRL algorithm with that from heuristic algorithms. The time consumption and feasibility of different algorithms will be included in discussion and be a kind of evaluation as well. By taking Google production data trace as an evaluation test-bed, we expect our algorithm could outperform other simple heuristic algorithms.
 
     \subsection{Results}
-    We compare \textit{AutoCache} with classicla algorithm LRU.
-    The resutls for training traces with 1000 samples.
+    We compare \textit{AutoCache} with classical algorithm LRU.
+    The results for training traces with 1000 samples.
     The results for test traces with 1000 samples.
     The CDF graph for training traces with LRU and \textit{AutoCache}.
 \end{section}
 
 \begin{section}{Conclusion}
     \label{summary}
-    In this section, \dots
+    In this paper, we study one simplified scenario for edge network caching environment.
+    We identify the game playing with respect to 
 \end{section}
 
 % \subsubsection*{Acknowledgments}
