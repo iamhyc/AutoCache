@@ -69,6 +69,7 @@
     In the following sections, we will firstly elaborate the network model and caching model for our problem, and then we come up with the formal problem definition in the last section.
 
     \subsection{Network Model}
+    \label{net_model}
     In our model, other than edge nodes and mobile users, there exists one centralized storage entity called \emph{Cloud} to store all the files users previously uploaded.
     The network model is illustrated in the following graph:
 
@@ -87,39 +88,33 @@
     \subsection{Caching Model}
     As for the caching procedure we described, there are just general files stored encoded in binary format. We consider that files are stored into segments on both Edge and Cloud side, which is easy to quantize the different length of files.The storage capacity of edge cache node is bounded considering energy efficiency and volume limit. But the storage on cloud is assumed to be incredible large.
     
-    The files are stored in segments on cloud and each segment is with the same size. The storage is continuous with all the file segments aligned head-to-tail; and for each file, we assume there is one oracle (or called \textit{function}) to query the starting and ending index for a certain file.
+    The files are stored in segments on cloud and each segment is with the same size. The storage is continuous with all the file segments aligned head-to-tail; and for each file, we assume there is one oracle (or called \textit{function}), $\mathcal{D}$ to query the starting and ending index for a certain file.
+
     However, the transmission time of the fixed-size segments could not be quantized due to the varied transmission delay on backhaul link. The integrity of the received segments is guaranteed by error-correction coding scheme and is not considered in our formulation. And due to the error-correction assumption, the fragment of a segment is meaningless and could not recover the original information without fully received.
 
     \subsection{Request Problem Definition}
-    With the Network and Cache model elaborated above, here we give the description of the whole request problem.
+    With the Network and Cache model elaborated above, here we give the description of the whole problem.
 
-    We assume that there are $N$ files in total for users, which are labeled as $\{1,2,\cdots,N\}$, accordingly. In addition, we assume that the sizes of each file are very close, which can be estimated as $l$. For simplicity, we just set it as $1$, which means the cache can include $C$ files. We denote the user request as $t$. The edge node can serve the request immediately if the requested file has been cached locally. Otherwise, the edge node has to request this file from the cloud server and updates the local cache accordingly. The list of users' requests is denoted as $\{R_1,R_2,\cdots\}$, where $R_t$ is the ID of the requested file at request time $t$.
+    We assume that there are total $N$ files for that user, and the file set is denoted as $\mathcal{F} = \{f_1, f_2, \dots, f_N\}$. Each file is composed of different number of segments, and stored continuously head-to-tail on cloud according to the index as:
+    $$
+    \mathcal{S_F} = \{S_{1,1}, \dots, S_{1,|f_1|}, \dots, S_{N,1}, \dots, S_{N,|f_n|}\}
+    $$
+    where $|f_i|$ is the number of segments of $i$-th file, and each segment $S_{i,j}$ is of same size denoted as $l_0$. For convenience of expression, we further define the public query oracle that:
+    $$
+    \mathcal{D}:f_i \to \{S_{f_i,1}, \dots, S_{f_i,|f_i|}\}, \forall f_i \in \mathcal{F}
+    $$
+    which is accessible from both Edge and Cloud to obtain the segments set of $i$-th file. The storage capacity of the cache node is denoted as $C$ segments, which is considered rather smaller compared with number of the total file segments.
 
-    File set:
-    $$
-    f_i\in\mathcal{F},(i=1,\cdots,m), \mathcal{F}
-    $$
-    Segments Function:
-    $$
-    s_j,(j=1,\cdots,n), \mathcal{S}
-    $$
-    Request in the following set:
-    $$
-    \mathcal{R}=\mathcal{F}\times\mathcal{S}
-    $$
-    To be specific, we consider one edge node for edge caching with cache size of $C$.
+    The request process $\mathcal{R}(t)$ could be divided into multiple episode, which means that the request could only in initiated after the previous request is been served, as we don't allow batched request in our problem. When one request happens, the cache node should firstly ask the oracle $\mathcal{D}$ to obtain the knowledge of segments set to serve. Then the Edge Node divided the requested segments set into two subset according to the storage: $\mathcal{S}_R^{1}$ for hit segments, $\mathcal{S}_R^{0}$ for missing segments.
+    The cache node could serve $\mathcal{S}_R^{1}$ with local hit segments each with fixed delay $T_0$ defined in \ref{net_model}. And the time consumed for $\mathcal{S}_R^{0}$ is what we want to minimize because we notice that the service time is heavily affected from the previous storage state.
 
-    The request process could be divided into multiple episode, as we don't allow batch-request in our problem.
-    And furthermore, we could consider two phases in this problem.
-    Phase-I: Proactive Caching; the proactively request .
-    Phase-II: Dedicated Service; the cache node serve the hit segments, and bypass the un-hit request from Cloud.
+    We denote the proactive caching policy set as $\mathcal{A} =\mathcal{F} \times \mathcal{S}$, which implies the complexity of potential action space is non-linear. And then we could formulate stochastic optimization problem as following:
+    $$
+    \min_{A} \lim_{T \to \infty} \frac{1}{T} E[\sum_r^{\mathcal{R}(t)} \frac{|\mathcal{S}_{r}^{0}|}{BW^{back}(t)}]
+    $$
+    which implies that the optimization target is to minimize the average service time for missing segments over all the time. The metric of service time is better than conventional git rate cause the varied delay of backhaul also affects the user experience. And for this stochastic optimization problem, we need powerful algorithm to predict the action with respect to request and delay distribution in real-time.
 
-    This stochastic optimization problem is with:
-    Optimization Target (Explain why \emph{service time} is the metric more important than \emph{hit rate})
-    $$
-        \min_{\Omega}\lim_{T \to \infty} 1/T \sum_{k=1}^{K_T} T^{service}
-    $$
-    $x(t)$ is defined as the location distribution of files over cache nodes, and it is worth noting that each file can have more than one copy exists at one time. The control vector $u(t)$ is proactive control to fetch files from the cloud server when request is failed to satisfy. The reward function $R(t)$ is consist of three parts: hit times, loss penalty and communication cost.
+    In the following chapter, we will formulate this optimization problem as deep reinforcement learning problem, and leverage an existing scheme called A3C to solve the proactive caching problem \cite{a3c}.
 \end{section}
 
 \begin{section}{\textsc{AutoCache}: A Proactive Cache Algorithm}
@@ -130,7 +125,15 @@
     We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment.
 
     \subsection{Reinforcement Learning Problem}
+    And furthermore, we could consider two phases in this problem.
+    Phase-I: Proactive Caching; the proactively request .
+    Phase-II: Dedicated Service; the cache node serve the hit segments, and bypass the un-hit request from Cloud.
+
     In our proposed model, the caching agent observes the environment and obtains several signals, including user requests, context information, and network conditions. These signals are assembled into a high-dimensional state input and then fed to the deep neural network embodied convolutional neural networks, which can mine useful information and output the value function or the policy. According to the output, an action is selected, determining the files to be cached at the next slot. The caching agent will receive a reward by observing the caching performance. The aim is to maximize (minimize) the expected accumulated discount reward (cost).
+
+    $x(t)$ is defined as the location distribution of files over cache nodes, and it is worth noting that each file can have more than one copy exists at one time.
+    The control vector $u(t)$ is proactive control to fetch files from the cloud server when request is failed to satisfy.
+    The reward function $R(t)$ is consist of three parts: hit times, loss penalty and communication cost.
 
     System state:
     $$
