@@ -6,6 +6,8 @@
 % \usepackage[nonatbib]{nips_2018} % to avoid loading the natbib package
 \usepackage[preprint, nonatbib]{nips_2018}
 
+\usepackage{graphicx}
+\graphicspath{ {./images/} }
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
@@ -55,10 +57,6 @@
 \begin{section}{Related Works}
     \label{review}
     In this section, \dots
-
-    Let $Q(s,a;\theta)$ be an approximate action-value function with parameter $\theta$.
-    
-    The general RL problem is formalized as a discrete time stochastic control process where an agent interacts with its environment $s_0\in\mathcal{S}$, by gathering an initial observation $\omega_0\in\Omega$. At each time step $t$, the agent has to take an action $a_t\in\mathcal{A}$. It follows three consequences: the agent obtains a reward $r_t\in\mathcal{R}$, the state transitions to $s_{t+1}\in\mathcal{S}$, and the agent obtains an observation $\omega_{t+1}\in\Omega$ \cite{DBLP:journals/corr/abs-1811-12560}.
 \end{section}
 
 \begin{section}{Formulation}
@@ -70,10 +68,19 @@
 
     \subsection{Network Model}
     In our model, other than edge nodes and mobile users, there exists one centralized storage entity called \emph{Cloud} to store all the files users previously uploaded.
-    The link between Edge Node and Cloud is called "backhaul link", and the link between edge node and mobile user is called "fronthaul link".
-    As we consider the scenario with edge cache, 
-    We the user-request communication model into two links. We call the link between edge node and cloud the "back-haul link", and the link between edge node and the user the "front-haul link".
-    The front-haul transmission is very fast due to the edge node is quite close to mobile users with only one hop. And the time is going to be that 
+    The network model is illustrated in the following graph:
+
+    \begin{figure}[h!]
+        \label{fig:network}
+        \centering
+        \includegraphics[width=0.8\linewidth]{images/network.png}
+        \caption{Network Model for Caching Problem}
+    \end{figure}
+
+    The link between Edge Node and Cloud is called "backhaul link", and the link between Edge node and UE (User Equipment) is called "fronthaul link".
+    As we consider the scenario with edge caching, it's reasonable that the delay of fronthaul link is rather fixed only caused by bandwidth restriction. The mobile user (UE) should be allocated with enough communication bandwidth with the support of the initialization procedure, as what we have talked about in the beginning. The backhaul is always assumed with large bandwidth supported by the backbone network, and the propagation and processing delay compose the major factors of the total link-wide delay.
+
+    Furthermore, we denote the the fronthaul delay with a constant $T_0$ as it's rather negligible compared with the backhaul delay. Then we denote the backhaul delay with a random variable $\mathcal{T}^{back}$, which could be estimated with large enough on-system data samples in the backbone network.
     
     \subsection{Caching Model}
     The storage model is described as followed. The request is based on general files and we don't care about the relationship among files.
@@ -110,7 +117,7 @@
     We assume that there are $N$ files in total for users, which are labeled as $\{1,2,\cdots,N\}$, accordingly. In addition, we assume that the sizes of each file are very close, which can be estimated as $l$. For simplicity, we just set it as $1$, which means the cache can include $C$ files. We denote the user request as $t$. The edge node can serve the request immediately if the requested file has been cached locally. Otherwise, the edge node has to request this file from the cloud server and updates the local cache accordingly. The list of users' requests is denoted as $\{R_1,R_2,\cdots\}$, where $R_t$ is the ID of the requested file at request time $t$.
 \end{section}
 
-\begin{section}{Proactive Cache: AutoCache}
+\begin{section}{\textsc{AutoCache}: A Proactive Cache Algorithm}
     \label{algorithm}
     In this section, we introduce the algorithm we developed to solve this problem.
     We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment.
