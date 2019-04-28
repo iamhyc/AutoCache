@@ -82,7 +82,7 @@
     The link between Edge Node and Cloud is called "backhaul link", and the link between Edge node and UE (User Equipment) is called "fronthaul link".
     As we consider the scenario with edge caching, it's reasonable that the delay of fronthaul link is rather fixed only caused by bandwidth restriction. The mobile user (UE) should be allocated with enough communication bandwidth with the support of the initialization procedure, as what we have talked about in the beginning. The backhaul is always assumed with large bandwidth supported by the backbone network, and the propagation and processing delay compose the major factors of the total link-wide delay.
 
-    Furthermore, we denote the the fronthaul delay with a constant $T_0$ as it's rather negligible compared with the backhaul delay. Then we denote the backhaul delay with a random variable $\mathcal{T}^{back}$, which could be estimated with large enough on-system data samples in the backbone network.
+    Furthermore, we denote the the fronthaul delay with a constant $T_0$ as it's rather negligible compared with the backhaul delay. Then we denote the pseudo-backhaul bandwidth with a random variable $BW^{back}$, which could be estimated with large enough on-system data samples in the backbone network.
     
     \subsection{Caching Model}
     As for the caching procedure we described, there are just general files stored encoded in binary format. We consider that files are stored into segments on both Edge and Cloud side, which is easy to quantize the different length of files.The storage capacity of edge cache node is bounded considering energy efficiency and volume limit. But the storage on cloud is assumed to be incredible large.
@@ -92,7 +92,9 @@
 
     \subsection{Request Problem Definition}
     With the Network and Cache model elaborated above, here we give the description of the whole request problem.
-    The request is based on general files and we don't care about the relationship among files.
+
+    We assume that there are $N$ files in total for users, which are labeled as $\{1,2,\cdots,N\}$, accordingly. In addition, we assume that the sizes of each file are very close, which can be estimated as $l$. For simplicity, we just set it as $1$, which means the cache can include $C$ files. We denote the user request as $t$. The edge node can serve the request immediately if the requested file has been cached locally. Otherwise, the edge node has to request this file from the cloud server and updates the local cache accordingly. The list of users' requests is denoted as $\{R_1,R_2,\cdots\}$, where $R_t$ is the ID of the requested file at request time $t$.
+
     File set:
     $$
     f_i\in\mathcal{F},(i=1,\cdots,m), \mathcal{F}
@@ -115,16 +117,15 @@
     This stochastic optimization problem is with:
     Optimization Target (Explain why \emph{service time} is the metric more important than \emph{hit rate})
     $$
-        \min_{\Omega}\lim_{T \to \infty} \sum_{t=0}^{T-1} T^{service}
+        \min_{\Omega}\lim_{T \to \infty} 1/T \sum_{k=1}^{K_T} T^{service}
     $$
     $x(t)$ is defined as the location distribution of files over cache nodes, and it is worth noting that each file can have more than one copy exists at one time. The control vector $u(t)$ is proactive control to fetch files from the cloud server when request is failed to satisfy. The reward function $R(t)$ is consist of three parts: hit times, loss penalty and communication cost.
-
-    We assume that there are $N$ files in total for users, which are labeled as $\{1,2,\cdots,N\}$, accordingly. In addition, we assume that the sizes of each file are very close, which can be estimated as $l$. For simplicity, we just set it as $1$, which means the cache can include $C$ files. We denote the user request as $t$. The edge node can serve the request immediately if the requested file has been cached locally. Otherwise, the edge node has to request this file from the cloud server and updates the local cache accordingly. The list of users' requests is denoted as $\{R_1,R_2,\cdots\}$, where $R_t$ is the ID of the requested file at request time $t$.
 \end{section}
 
 \begin{section}{\textsc{AutoCache}: A Proactive Cache Algorithm}
     \label{algorithm}
     \hl{Please help check the correctness of algorithm}
+
     In this section, we introduce the algorithm we developed to solve this problem.
     We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment.
 
@@ -167,8 +168,6 @@
 
 \begin{section}{Performance Ecaluation}
     \label{exp}
-    We have obtained the real users' data from Google \cite{clusterdata:Reiss2011}. The direct usage is actually cooked by \cite{Pensieve}.
-
     We choose the performance metric as the only one cost: average service time. We develope one classical offline algorithm, LRU, and compare the performance with our algorithm \textsc{AutoCache}.
     
     Then we collect enough data samples from experiencing the simulated environment, and plot the CDF (Cumulative Distribution Function) versus the normalized service time.
@@ -176,7 +175,16 @@
     The experiments details are listed in the following sections. We firstly talk about the parameters setup we use and the data trace.
 
     \subsection{Simulation Setup}
-     We plan to examine the data trace under the criterion with consideration of quality of service (QoS). In order to highlight our algorithm performance, we also propose to compare the result from our DRL algorithm with that from heuristic algorithms. The time consumption and feasibility of different algorithms will be included in discussion and be a kind of evaluation as well. By taking Google production data trace as an evaluation test-bed, we expect our algorithm could outperform other simple heuristic algorithms.
+    We have obtained the real users' data from Google \cite{clusterdata:Reiss2011}. The direct usage is actually cooked by \cite{Pensieve}. The data trace is borrowed cooked data trace from Pensieve \cite{Pensieve}, with the format: [timestamp (s), bandwidth (MBps)].
+
+    We implement our code with Tensorflow.
+    The experiment environment is:
+    Windows Subsystem for Linux, Python 3.7+, Tensorflow 1.9; the algorithm Parallel agents on 4 CPU cores.
+
+    The generated request is (over 6 files): Interval with Poisson distribution (mean with 6 seconds); File Popularity with Zipf (over total 6 files, and randomly generated segments oracle)
+    And the storage capacity for cache is: 5 segments, each with 10MB.
+
+    We plan to examine the data trace under the criterion with consideration of quality of service (QoS). In order to highlight our algorithm performance, we also propose to compare the result from our DRL algorithm with that from heuristic algorithms. The time consumption and feasibility of different algorithms will be included in discussion and be a kind of evaluation as well. By taking Google production data trace as an evaluation test-bed, we expect our algorithm could outperform other simple heuristic algorithms.
 
     \subsection{Results}
     We compare \textsc{AutoCache} with classical algorithm LRU.
@@ -200,8 +208,8 @@
 
 \begin{section}{Conclusion}
     \label{summary}
-    In this paper, we study one simplified scenario for edge network caching environment.
-    We identify the game playing with respect to 
+    In this paper, we study one simplified scenario for edge network caching environment. We identify that the single-user-single-cache game could be separated into two phases, proactive caching and passive service, where the transition signal is the user's file request. In the proactive phase, we formulate one reinforcement learning problem and in the second phase we find one heuristic algorithm to efficiently 
+    Then we develop our proactive caching prediction algorithm \textsc{AutoCache} with Tensorflow, and compare with classical passive caching algorithm LRU. Over large sample set under different network conditions, the CDF of service time shows that our algorithm could obviously outperform LRU, and the storage varies slowly with less bandwidth consumed.
 \end{section}
 
 % \subsubsection*{Acknowledgments}
