@@ -8,13 +8,15 @@
 
 \usepackage{graphicx}
 \graphicspath{ {./images/} }
+\usepackage{subfig}
+\usepackage{color,soul}
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
 \usepackage{amsfonts}       % blackboard math symbols
-\usepackage{microtype}      % microtypography
+\usepackage{microtype}      % micro-typography
 \usepackage{cite}
 \usepackage{color}
 \usepackage{algorithmicx}
@@ -44,7 +46,7 @@
     \label{intro}
     Caching is a widely used technology in system to reduce the load on access communication links and shorten access time to the selected contents \cite{general-cache}. This technique is often aimed at caching the contents from the cloud server in advance. In this particular way, the time and resources needed to request and transport contents from upper level cloud server can be effectively saved.
     
-    As for caching placement problem, one practical design is content delivery network (CDN) which is a network of servers linked together in order to deliver contents with high performance \cite{cloudflare}. Emerging areas, such as information cetric networks (ICNs) and cloud computing frameworks, \cite{ref1,ref2,ref3,ref4} are based on caching problem and are attracting researchers' attention. Many algorithms for caching placement problems are elaborated in related works \cite{dl-mec,dl-icn,expert-cdn}.
+    As for caching placement problem, one practical design is content delivery network (CDN) which is a network of servers linked together in order to deliver contents with high performance \cite{cloudflare}. Emerging areas, such as information centric networks (ICNs) and cloud computing frameworks, \cite{ref1,ref2,ref3,ref4} are based on caching problem and are attracting researchers' attention. Many algorithms for caching placement problems are elaborated in related works \cite{dl-mec,dl-icn,expert-cdn}.
     
     However, with content caching rises the policy control problem, in which we have to explore and decide which contents to store in caches \cite{DBLP:journals/corr/abs-1712-08132}. Although many related works have exploited their algorithms, few of them can adapt to the online production environment with complicated control problem very well. Inspired by deep reinforcement learning method, we propose to design a DRL algorithm for caching decisions. Our concern in this proposal is to formulate the basic frame for cache hit rate, cache replacement cost and communication cost, and to train a neural network to select the optimal online placement decision for cache nodes.
 \end{section}
@@ -83,11 +85,14 @@
     Furthermore, we denote the the fronthaul delay with a constant $T_0$ as it's rather negligible compared with the backhaul delay. Then we denote the backhaul delay with a random variable $\mathcal{T}^{back}$, which could be estimated with large enough on-system data samples in the backbone network.
     
     \subsection{Caching Model}
-    The storage model is described as followed. The request is based on general files and we don't care about the relationship among files.
-    The storage capacity of edge cache node is bounded, due to efficiency limit. But the storage on cloud is assumed to be incredible large. The files are stored in segments on cloud. Each segment is with the same size.
-    The caching allows bypass request.
+    As for the caching procedure we described, there are just general files stored encoded in binary format. We consider that files are stored into segments on both Edge and Cloud side, which is easy to quantize the different length of files.The storage capacity of edge cache node is bounded considering energy efficiency and volume limit. But the storage on cloud is assumed to be incredible large.
+    
+    The files are stored in segments on cloud and each segment is with the same size. The storage is continuous with all the file segments aligned head-to-tail; and for each file, we assume there is one oracle (or called \textit{function}) to query the starting and ending index for a certain file.
+    However, the transmission time of the fixed-size segments could not be quantized due to the varied transmission delay on backhaul link. The integrity of the received segments is guaranteed by error-correction coding scheme and is not considered in our formulation. And due to the error-correction assumption, the fragment of a segment is meaningless and could not recover the original information without fully received.
 
-    \subsection{Problem Definition}
+    \subsection{Request Problem Definition}
+    With the Network and Cache model elaborated above, here we give the description of the whole request problem.
+    The request is based on general files and we don't care about the relationship among files.
     File set:
     $$
     f_i\in\mathcal{F},(i=1,\cdots,m), \mathcal{F}
@@ -105,7 +110,7 @@
     The request process could be divided into multiple episode, as we don't allow batch-request in our problem.
     And furthermore, we could consider two phases in this problem.
     Phase-I: Proactive Caching; the proactively request .
-    Phase-II: Dedicated Service; the cache node serve the hitted segments, and bypass the un-hitted request from Cloud.
+    Phase-II: Dedicated Service; the cache node serve the hit segments, and bypass the un-hit request from Cloud.
 
     This stochastic optimization problem is with:
     Optimization Target (Explain why \emph{service time} is the metric more important than \emph{hit rate})
@@ -119,6 +124,7 @@
 
 \begin{section}{\textsc{AutoCache}: A Proactive Cache Algorithm}
     \label{algorithm}
+    \hl{Please help check the correctness of algorithm}
     In this section, we introduce the algorithm we developed to solve this problem.
     We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment.
 
@@ -142,22 +148,54 @@
     In order to limit the action size, for each request, the DRL agent makes a decision on whether to store the currently requested file in the cache or not, and if yes, the agent determines which local file will be replaced. For each caching decision, there are $(C+1)$ possible actions. When $a_t=0$, the currently requested file is not stored, and the current caching space is not changed. When $a_t=n$, where $n\in\{1,2,\cdots,C\}$, the action is to store the currently requested file by replacing the $n$-th file in the cache.
 
     Inspired by \cite{Pensieve}, we propose to design the algorithm based on reinforcement learning (RL). Consider the standard reinforcement learning setting where an agent interacts with an environment $\mathcal{E}$ over a number of discrete time steps. At each time step $t$, the agent receives a state $s_t$ and selects an action $a_t$ from some set of possible actions $\mathcal{A}$ according to its policy $\pi$, where $\pi$ is a mapping from state $s_t$ to action $a_t$. In return, the agent receives the next state $s_{t+1}$ and receives a scalar reward $r_t$. The process continues until the agent reaches a terminal state after which the process restarts. The return $R_t=\sum_{k=0}^{\infty}\gamma^k r_{t+k}$ is the total accumulated return from time step $t$ with discount factor $\gamma\in(0,1]$. The goal of the agent is to maximize the expected return from each state $s_t$ \cite{rl-intro}. The action value $Q^{\pi}(s,a)=\mathbb{E}[R_t|s_t=s,a]$ is the expected return for selecting action $a$ in state $s$ and following policy $\pi$. The optimal value function $Q^*(s,a)=\max_{\pi}Q^{\pi}(s,a)$ gives the maximum action value for state $s$ and action $a$ achievable by any policy. The value of state $s$ under policy $\pi$ is defined as $V^{\pi}(s)=\mathbb{E}[R_t|s_t=s]$ and is the expected return for following policy $\pi$ from state $s$ \cite{DBLP:journals/corr/MnihBMGLHSK16}. The value function can be represented using a neural network, for example, an actor-critic network. The algorithm is proposed to perform online and hoped to achieve high efficiency.
+
+    \subsection{Training Algorithm}
+    The applied policy gradient is computed in following according to \cite{a3c}:
+    $$
+    \nabla_\theta E_{\pi_\theta}[\sum_{t=0}^{\infty} \gamma^ r_t] = E_{\pi_\theta} [\nabla_{\pi_\theta} log_{\pi_\theta}(s,a) A^{\pi_\theta}(s,a)]
+    $$
+    The training algorithm is given in the following graph:
+
+    \begin{figure}[h]
+        \label{fig:a3c}
+        \centering
+        \includegraphics[width=0.8\linewidth]{a3c-network.png}
+        \caption{The actor-Critic algorithms uses for \textsc{AutoCache}}
+    \end{figure}
+    
 \end{section}
 
 \begin{section}{Performance Ecaluation}
     \label{exp}
-    We choose the performance metric as the only one cost: service time, for each user's request. Then we collect enough data samples from experiencing the simulated environment, and plot the CDF (Cumulative Distribution Function) versus the normalized service time.
+    We have obtained the real users' data from Google \cite{clusterdata:Reiss2011}. The direct usage is actually cooked by \cite{Pensieve}.
+
+    We choose the performance metric as the only one cost: average service time. We develope one classical offline algorithm, LRU, and compare the performance with our algorithm \textsc{AutoCache}.
+    
+    Then we collect enough data samples from experiencing the simulated environment, and plot the CDF (Cumulative Distribution Function) versus the normalized service time.
     The baseline algorithm we chose is LRU (Least Recently Used), which is a very classical algorithm in passive caching decision.
     The experiments details are listed in the following sections. We firstly talk about the parameters setup we use and the data trace.
 
     \subsection{Simulation Setup}
-    We have obtained the real users' data from Google \cite{clusterdata:Reiss2011}. We plan to examine the data trace under the criterion with consideration of quality of service (QoS). In order to highlight our algorithm performance, we also propose to compare the result from our DRL algorithm with that from heuristic algorithms. The time consumption and feasibility of different algorithms will be included in discussion and be a kind of evaluation as well. By taking Google production data trace as an evaluation test-bed, we expect our algorithm could outperform other simple heuristic algorithms.
+     We plan to examine the data trace under the criterion with consideration of quality of service (QoS). In order to highlight our algorithm performance, we also propose to compare the result from our DRL algorithm with that from heuristic algorithms. The time consumption and feasibility of different algorithms will be included in discussion and be a kind of evaluation as well. By taking Google production data trace as an evaluation test-bed, we expect our algorithm could outperform other simple heuristic algorithms.
 
     \subsection{Results}
-    We compare \textit{AutoCache} with classical algorithm LRU.
+    We compare \textsc{AutoCache} with classical algorithm LRU.
     The results for training traces with 1000 samples.
     The results for test traces with 1000 samples.
-    The CDF graph for training traces with LRU and \textit{AutoCache}.
+    The CDF graph for training traces with LRU and \textsc{AutoCache}.
+    \begin{figure}[htp]
+        \centering
+        \subfloat[with training data trace]{
+            \includegraphics[width=0.45\linewidth]{training.png}
+            \label{fig:train}
+        }
+        \hfill
+        \subfloat[with test data trace]{
+            \includegraphics[width=0.45\linewidth]{testing.png}
+            \label{fig:test}
+        }
+        \caption{The CDF of service delay of LRU and DRL algorithm under training and test data trace}
+    \end{figure}
 \end{section}
 
 \begin{section}{Conclusion}
