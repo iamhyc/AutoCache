@@ -10,6 +10,8 @@
 \graphicspath{ {./images/} }
 \usepackage{subfig}
 \usepackage{color,soul}
+\usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
@@ -132,33 +134,28 @@
 
     In our proposed model, the caching agent observes the environment and obtains several signals, including user requests, context information, and network conditions. These signals are assembled into a high-dimensional state input and then fed to the deep neural network embodied convolutional neural networks, which can mine useful information and output the value function or the policy. According to the output, an action is selected, determining the files to be cached at the next slot. The caching agent will receive a reward by observing the caching performance. The aim is to maximize (minimize) the expected accumulated discount reward (cost).
 
-    And furthermore, we could consider two phases in this problem.
-    Phase-I: Proactive Caching; the proactively request .
-    Phase-II: Dedicated Service; the cache node serve the hit segments, and bypass the un-hit request from Cloud.
+    The system state for this problem is: $\tau$ as last segment downloading time, $B$ as last downloading bandwidth, and $C$ for cache storage expression.
 
-    $x(t)$ is defined as the location distribution of files over cache nodes, and it is worth noting that each file can have more than one copy exists at one time.
-    The control vector $u(t)$ is proactive control to fetch files from the cloud server when request is failed to satisfy.
-    The reward function $R(t)$ is consist of three parts: hit times, loss penalty and communication cost.
-
-    System state:
+    In order to represent the limits on the storage capacity, the DRL agent makes a decision for each request on whether to store the currently requested file in the cache or not; and if yes, the agent determines which local file will be replaced. For each caching decision, there are $\mathcal{C} \times \mathcal{S} + 1$ possible actions. When $a_i=0$, the currently requested file is not stored, and the current caching space is not changed. When $a_i = n$, where $n\in\{1,2,\cdots,\mathcal{S_F}\}$, the action is to store the currently requested file by replacing the $n$-th file in the cache. The mathematical representation for action over one entry could be formulated as:
     $$
-    x(t)
+    a_i \triangleq I[C[i]=s], \forall i \in [1, \dots, |C|]
     $$
-    We aim to find the optimal caching policy to maximize the expected accumulated discount reward $\mathbb{E}\left[\sum_{t=0}^{\infty}\gamma^tr_t\right]$, where $\gamma\in(0,1]$ and the reward is defined as where $\mathcal{C}_t$ is the cache state in this period. The motivation is to represent the cache hit rate, which evaluates the data traffic.
-
-    We define the action space as $\mathcal{A}=\{a_1,a_2,\cdots,a_m\}$, where $m$ describes the total possible actions and generally a large value. For each file, there are two cache states: cached and not cached. There are also two kinds of actions: find a pair of files and exchange the cache states of the two files; keep the cache states of files unchanged.
-    \emph{State:}\\
-    After each request $t$, the caching agent state is defined as
-    $$
-        s_t=\left(x_{t0},x_{t1},x_{t2}\cdots,x_{tC}\right)
-    $$
-    where the index of the currently requested file is $0$, while the index of the cached file is from $1$ to $C$.\\
-    \emph{Action:}\\
-    In order to limit the action size, for each request, the DRL agent makes a decision on whether to store the currently requested file in the cache or not, and if yes, the agent determines which local file will be replaced. For each caching decision, there are $(C+1)$ possible actions. When $a_t=0$, the currently requested file is not stored, and the current caching space is not changed. When $a_t=n$, where $n\in\{1,2,\cdots,C\}$, the action is to store the currently requested file by replacing the $n$-th file in the cache.
+    where $s \in [0, |\mathcal{S_F}|]$. We define the action space as $\mathcal{A}=\{a_1, a_2, \cdots, a_C\}$. For each file, there are two cache states: cached and not cached. There are also two kinds of actions: find a pair of files and exchange the cache states of the two files; keep the cache states of files unchanged.
     
+    We aim to find the optimal caching policy to maximize the expected accumulated discount cost as collection of service time
+    $$
+    \min E[\sum_{t=0}^{\infty} \gamma^t r_t]
+    $$
+    , where $\gamma\in(0,1]$ and the reward is defined as
+    $$
+    r_t = I[\text{in-service}]
+    $$
+    where the indicator function is noticed by the environment for whether the agent is responding the request in this period. And furthermore, there exists near-optimal heuristic algorithm for the service phase: the cache could stop caching the segments not in $S^{0}_{R}$ but only bypass request for the missing segments from Cloud for this request. This heuristic algorithm could actually be simulated by environment, and not available in formulation of DRL.
 
     \subsection{Training Algorithm}
-    \hl{Please help check the correctness of algorithm}
+    \begin{center}
+        \hl{Please help check the correctness of algorithm description}
+    \end{center}
     The following training algorithm procedure is abstracted from the original paper \cite{a3c} and take reference from \textit{Pensieve} \cite{Pensieve}.
 
     Our algorithm firstly obtain the states after taking action.
