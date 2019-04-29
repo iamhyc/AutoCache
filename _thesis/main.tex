@@ -41,29 +41,73 @@
 \maketitle
 
 \begin{abstract}
-  With the development of cache technology, the performance of real-time networks keeps increasing. The traditional designs for cache placement problem ordinarily employ simple online algorithms, resulting in limitations of solvable problem domain. In this paper, we consider a complicated dynamic programming problem, which is difficult to be solved efficiently with the traditional algorithms. Here, we propose to solve the caching placement problem within acceptable time with deep reinforcement learning (DRL). The performance of our implementations will be evaluated with the real users' data from Google.
+  In next-generation networks, proactive edge caching is a promising technique to reduce the data traffic while improve the quality of experience of users. However, it is challenging to solve the edge caching problem with unknown future content popularity and complex network characteristics. Inspired by the success of \emph{Deep Reinforcement Learning} (DRL) in solving complicated decision making problem, this work presents a DRL-based framework for proactive edge caching. Our goal is to minimize the expected long-term average re-buffering download time. To evaluate the proposed framework, we compare the performance with \emph{Least Recently Used} (LRU) caching strategy. Our results show that the proposed DRL-based algorithm can achieve better performance in comparison with LRU scheme.
 \end{abstract}
 
 \begin{section}{Introduction}
     \label{sec:intro}
-    Caching is a widely used technology in system to reduce the load on access communication links and shorten access time to the selected contents \cite{general-cache}. This technique is often aimed at caching the contents from the cloud server in advance. In this particular way, the time and resources needed to request and transport contents from upper level cloud server can be effectively saved.
+    Content caching is a promising technology in system to reduce the load on access communication links and shorten access time to the selected contents \cite{general-cache}. This technique is aimed at pre-caching the contents at the edge from the cloud server in advance. In this particular way, the time and resources needed to request and transport contents from upper level cloud server can be effectively saved.
     
-    As for caching placement problem, one practical design is content delivery network (CDN) which is a network of servers linked together in order to deliver contents with high performance \cite{cloudflare}. Emerging areas, such as information centric networks (ICNs) and cloud computing frameworks, \cite{ref1,ref2,ref3,ref4} are based on caching problem and are attracting researchers' attention. Many algorithms for caching placement problems are elaborated in related works \cite{dl-mec,dl-icn,expert-cdn}.
+    % As for caching placement problem, one practical design is content delivery network (CDN) which is a network of servers linked together in order to deliver contents with high performance \cite{cloudflare}. Emerging areas, such as information centric networks (ICNs) and cloud computing frameworks, \cite{ref1,ref2,ref3,ref4} are based on caching problem and are attracting researchers' attention. Many algorithms for caching placement problems are elaborated in related works \cite{dl-mec,dl-icn,expert-cdn}.
     
-    However, with content caching rises the policy control problem, in which we have to explore and decide which contents to store in caches \cite{DBLP:journals/corr/abs-1712-08132}. Although many related works have exploited their algorithms, few of them can adapt to the online production environment with complicated control problem very well. Inspired by deep reinforcement learning method, we propose to design a DRL algorithm for caching decisions. Our concern in this proposal is to formulate the basic frame for cache hit rate, cache replacement cost and communication cost, and to train a neural network to select the optimal online placement decision for cache nodes.
-\end{section}
-
-\begin{section}{Background}
-    \label{sec:background}
-    In this section, \dots
+    However, for proactive edge caching, we have to explore and decide which files or contents to store in caches, which leads to the policy control problem \cite{DBLP:journals/corr/abs-1712-08132}. Although many related works have exploited their algorithms, few of them can adapt to the online production environment with complicated control problem very well. Inspired by \emph{Deep Reinforcement Learning} (DRL) method, we propose a DRL-based framework "AutoCache" for caching decisions. In this paper, we design a DRL agent for segment caching decisions at an edge node. Users keep requesting file from the edge node, which is supposed as a queue of requests to be served. The edge cache has a fixed storage capacity, which is the maximum file segments that can be cached at this node. Furthermore, we present the simulation results to validate the effectiveness of the proposed AutoCache algorithm for edge caching.
+    
+    To the best known of authors' knowledge, this work makes the first attempt to consider the two-phase request model with deep reinforcement learning framework for edge caching. We propose a novel algorithm "AutoCache" to solve policy control issues in align with our model implementation. The simulation results are compared with the classical LRU caching policy to clarify the performance of our new method. The comparison shows the proposed DRL-based algorithm outperforms the LRU caching policy for edge caching.
 \end{section}
 
 \begin{section}{Related Works}
     \label{sec:review}
-    In this section, \dots
+    Proactive content caching is an active area in networks, which has attracted much attention of researchers. From the aspect of big data, the proactive caching is discussed with regard to the improvement of user experience and reduction of data traffic \cite{rw1}. The study in \cite{rw3} proposed an age-based threshold policy which caches all contents that have been requested more than a threshold. In addition, some popularity-based content caching policies, such as StreamCache in \cite{rw4} and PopCaching in \cite{rw5}, are studied. Recently, researchers are paying more attention to machine learning based methods. In \cite{rw2}, the authors studied three learning based content replacement algorithms with different exploration-exploitation trade-offs. In the context of uncertain content popularity, the multi-armed bandit learning algorithm is used for estimation of content popularity in \cite{rw6} and an extreme-learning machine framework is proposed for content popularity prediction in \cite{rw7}.
+    
+    As illustrated in previous related works, the key to solve the content caching problem is the content popularity distribution estimation. Considering the complex network environment and the uncertain popularity, some researchers introduce deep reinforcement learning as the strategy to solve the problem. For example, the multi-step return actor-critic architecture, a typical DRL algorithm, is proposed to apply in proactive caching \cite{rw8}. In \cite{Pensieve}, a system named Pensieve that generates \emph{adaptive bitrate} (ABR) algorithms using DRL is proposed for video chunks caching. More recently, the application of DRL in mobile edge caching is discussed in details \cite{MEC}. The simulation results in these works show good performance of DRL algorithms with policy problem, which motivates more researchers to implement more DRL-based model for various scenarios.
 \end{section}
 
-\begin{section}{Formulation}
+\begin{section}{Background}
+    \label{sec:background}
+    \subsection{Edge Caching}
+    Nowadays, the number of files available over the Internet is extremely huge. Considering the storage space of edge nodes is limited, there exists a policy problem to decide how to store the files in the cache. For this problem, the popularity of content should be taken into consideration. Usually, it is assumed that content popularity follows a static Zipf distribution \cite{7524380}. However, since the the user preferences may be changing and uncertain with time, the true distribution of content popularity is unknown and complex \cite{7524790}.
+    
+    The objective of caching policies is commonly related to the cache hit ratio, which is the probability that the contents requested by users are cached in the edge networks. Some conventional caching policies, such as LRU and LFU, have been widely used in caching systems, but these policies perform not well in edge caching, especially mobile edge caching systems, due to being unable to consider the changes and uncertainty in the operating environments.
+    
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.8\linewidth]{images/cache.png}
+        \caption{Architecture of edge caching \cite{MEC}}
+        \label{fig:network}
+    \end{figure}
+    
+    \subsection{Deep Reinforcement Learning}
+    The standard reinforcement learning setting is where an agent interacts with an environment over a number of discrete time steps \cite{DBLP:journals/corr/MnihBMGLHSK16}. At each time step $t$, the agent receives a state $s_t$ and selects an action $a_t$ from some set of possible action $\mathcal{A}$ according to its policy $\pi$, where $\pi$ is a mapping from states $s_t$ to actions $a_t$. In return, the agent receives the next state $s_{t+1}$ and receives a reward $r_t$. The process continues until the agent reaches a terminal state after which the process restarts. The return $R_t=\sum_{k=0}^{\infty}\gamma^kr_{t+k}$ is the total accumulative return from time step $t$ with discount factor $\gamma\in(0,1]$. The goal of the agent is to maximize the expected return from each state $s_t$. The action value $Q^{\pi}(s,a)=\mathbb{E}[R_t|s_t=s,a]$ is the expected return for selecting action $a$ in state $s$ and following policy $\pi$. The optimal value function $Q^*(s,a)=\max_{\pi}Q^{\pi}(s,a)$ gives the maximum action value for state $s$ and action $a$ achievable by any policy. The value of state $s$ under policy $\pi$ is defined as $V^{\pi}(s)=\mathbb{E}[R_t|s_t=s]$ and is simply the expected return for following policy $\pi$ from state $s$ \cite{DBLP:journals/corr/MnihBMGLHSK16}.
+    
+    Q-learning is a value-based off-policy method. In deep Q-Learning, the deep neural network is used to be a function approximator to estimate the action-value function: $Q(s,a;\theta)\approx Q^*(s,a)$, where the weight parameters of the deep neural network is $\theta$. The loss function can be defined as
+    $$
+    L_{i}\left(\theta_{i}\right)=\mathbb{E}_{s, a \sim \rho(\cdot)}\left[\left(y_{i}-Q\left(s, a ; \theta_{i}\right)\right)^{2}\right]
+    $$
+    where
+    $$
+    y_{i}=\mathbb{E}_{s^{\prime} \sim \mathcal{S}}\left[r+\gamma \max _{a^{\prime}} Q\left(s^{\prime}, a^{\prime} ; \theta_{i-1}\right) | s, a\right]
+    $$
+    Then the problem can be solved by gradient update
+    $$
+    \nabla_{\theta_{i}} L_{i}\left(\theta_{i}\right)=\mathbb{E}_{s, a \sim \rho(\cdot)}\left[\left(r+\gamma \max _{a^{\prime}} Q\left(s^{\prime}, a^{\prime} ; \theta_{i-1}\right)-Q\left(s, a ; \theta_{i}\right)\right) \nabla_{\theta_{i}} Q\left(s, a ; \theta_{i}\right)\right]
+    $$
+    Policy Gradients methods are policy-based, which directly optimize the policy space. For each policy $\pi_{\theta}$, define its value as follows.
+    $$
+    J(\theta)=\mathbb{E}\left[\sum_{t \geq 0} \gamma^{t} r_{t} | \pi_{\theta}\right]
+    $$
+    so the optimal policy is given by $\theta^*=\arg\max_{\theta}J(\theta)$.
+    When sampling a trajectory $\tau$, we can estimate $J(\theta)$ with
+    $$
+    \nabla_{\theta} J(\theta) \approx \sum_{t \geq 0} r(\tau) \nabla_{\theta} \log \pi_{\theta}\left(a_{t} | s_{t}\right)
+    $$
+    We want to push up the probability of an action from a state, if this action was better than the expected value of what we should get from that state. Especially, we favor an action $a_t$ in a state $s_t$ if $Q^{\pi}\left(s_{t}, a_{t}\right)-V^{\pi}\left(s_{t}\right)$ is large, and vice versa. Therefore, the estimator can be rewritten as
+    $$
+    \nabla_{\theta} J(\theta) \approx \sum_{t \geq 0}\left(Q^{\pi_{\theta}}\left(s_{t}, a_{t}\right)-V^{\pi_{\theta}}\left(s_{t}\right)\right) \nabla_{\theta} \log \pi_{\theta}\left(a_{t} | s_{t}\right)
+    $$
+    Actor-Critic algorithm combines the Policy Gradients and Q-Learning by training both an actor and a critic. The actor decides which action to take, and the critic tells the actor how good its action was and how it should adjust. The task of the critic is also alleviated, as it only has to learn the values of state-action pairs generated by policy. 
+\end{section}
+
+\begin{section}{Model Formulation}
     \label{sec:formulation}
     We consider the scenario that one single user continuously request a finite set of files from one single edge node. The request would demand one file consisted of segments one time, and there are fixed known file set for that user on the cache node.
     This proposed problem could be considered as taken apart from a more complex model. As the cache node is with finite coverage to server the mobile devices, the mobile users could find finite number of edge cache nodes around. The generalized protocol for association could be: One mobile users firstly initiate the \textit{association request} with all of the cache nodes it could "see", then associate with the best one which accepts the request; the cache node then reserve storage space according to user's quota for service, and thus independent from other users' request response.
@@ -122,7 +166,7 @@
 \begin{section}{\textsc{AutoCache}: A Proactive Cache Algorithm}
     \label{sec:algorithm}
     In this section, we introduce the algorithm \textsc{AutoCache} to solve this problem. We apply deep reinforcement learning in edge caching, which is able to learn caching policy automatically without any prior programmed control rules or explicit assumptions about the operating environment.
-
+    
     \subsection{Reinforcement Learning Problem}
     Inspired by Pensieve \cite{Pensieve}, we propose an algorithm designed based on reinforcement learning (RL). We firstly rewrite the previous optimization definition in section \ref{sec:formulation} into RL format, then reveal the insights of this problem and develop our algorithm.
 
@@ -151,11 +195,16 @@
     r_t = I[\text{in-service}]
     $$
     where the indicator function is noticed by the environment for whether the agent is responding the request in this period. And furthermore, there exists near-optimal heuristic algorithm for the service phase: the cache could stop caching the segments not in $S^{0}_{R}$ but only bypass request for the missing segments from Cloud for this request. This heuristic algorithm could actually be simulated by environment, and not available in formulation of DRL.
-
+    
+    \begin{figure}[htp]
+        \centering
+        \includegraphics[width=0.8\linewidth]{a3c-network.png}
+        \caption{The used actor-Critic algorithm for \textsc{AutoCache}}
+        \label{fig:a3c}
+    \end{figure}
+    
     \subsection{Training Algorithm}
-    \begin{center}
-        \hl{Please help check the correctness of algorithm description}
-    \end{center}
+    
     The following training algorithm procedure is abstracted from the original paper \cite{a3c} and take reference from \textit{Pensieve} \cite{Pensieve}.
 
     Our algorithm firstly obtain the states after taking action.
@@ -167,12 +216,7 @@
     $$
     where $A^{\pi_theta}(s,a)$ is the \textit{advantage} function, which represents the difference in the expected total cost \cite{Pensieve}. The illustration of the approximation is showed in the lower part of Figure \ref{fig:a3c}.
 
-    \begin{figure}[htp]
-        \centering
-        \includegraphics[width=0.8\linewidth]{a3c-network.png}
-        \caption{The actor-Critic algorithms uses for \textsc{AutoCache}}
-        \label{fig:a3c}
-    \end{figure}
+    
     
 \end{section}
 
@@ -218,9 +262,6 @@
     In this paper, we study one simplified scenario for edge network caching environment. We identify that the single-user-single-cache game could be separated into two phases, proactive caching and passive service, where the transition signal is the user's file request. In the proactive phase, we formulate one reinforcement learning problem and in the second phase we find one heuristic algorithm to efficiently 
     Then we develop our proactive caching prediction algorithm \textsc{AutoCache} with Tensorflow, and compare with classical passive caching algorithm LRU. Over large sample set under different network conditions, the CDF of service time shows that our algorithm could obviously outperform LRU, and the storage varies slowly with less bandwidth consumed.
 \end{section}
-
-% \subsubsection*{Acknowledgments}
-% Thanks for the inspiration from \textit{Pensieve} the paper that we could make up this model. Thanks for Pro TAN Haisheng's description on basic caching problem.
 
 % \section*{References}
 \bibliographystyle{IEEEtran}
